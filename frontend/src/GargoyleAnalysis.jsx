@@ -33,9 +33,6 @@ export const GargoyleAnalysis = ({ gargoyle }) => {
                   )
                 })}
                 <div>
-                  {formatUpTime(window.unholy_presence_uptime, "Unholy Presence")}
-                </div>
-                <div>
                   {formatUpTime(window.bloodlust_uptime, "Bloodlust")}
                 </div>
                 <div>
