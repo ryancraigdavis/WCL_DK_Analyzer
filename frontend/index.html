@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/eye-favicon.png" />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DK Analyze</title>
+  </head>
+  <body onload="adjust_iframe_height()">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      function adjust_iframe_height() {
+        const height = document.body.offsetHeight;
+        // add 1 for a bug on windows where it shows a scrollbar
+        parent.postMessage(height + 1, "*");
+      }
+
+      const config = { attributes: false, childList: true, subtree: true };
+      new MutationObserver(() => {
+        adjust_iframe_height();
+        // if it loads too fast, the event will get ignored
+        setTimeout(adjust_iframe_height, 100)
+      }).observe(document.body, config);
+      addEventListener("load", () => adjust_iframe_height);
+      addEventListener("resize", adjust_iframe_height);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,314 @@
+#root {
+  max-width: 1280px;
+  min-height: 200px;
+  margin: 0 auto;
+  margin-top: 10px;
+}
+
+table {
+  border-collapse: collapse;
+  line-height: 30px;
+}
+
+.fa-external-link {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+}
+
+.total-score-tooltip {
+  vertical-align: top;
+}
+
+.tooltip-container {
+  position: relative;
+  font-size: 14px;
+  text-align: start;
+  height: 100%;
+  font-weight: normal;
+
+  margin: 5px;
+
+  i {
+    color: #4a80ff;
+    font-size: 12px;
+  }
+
+  .tooltip {
+    display: none;
+    position: absolute;
+    width: 200px;
+    color: white;
+    background: #003366;
+    border-radius: 10px;
+    padding: 2px;
+    padding-left: 10px;
+    margin-left: 5px;
+    top: -4px;
+  }
+
+  .tooltip-show {
+    display: inline-block;
+  }
+}
+
+.ability {
+  .ability-name {
+    display: inline-block;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.total-score-div {
+  width: 100%;
+
+  .total-score {
+    font-size: 28px;
+  }
+}
+
+th,
+td {
+  padding: 0;
+  padding-left: 5px;
+  padding-right: 10px;
+  border: 1px solid #3b3939;
+  border-style: inset;
+  border-width: thin;
+}
+
+th {
+  background-color: #380404;
+}
+
+td {
+  font-size: 16px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+tr:nth-child(odd) {
+  background-color: #0f0f0f;
+}
+
+tr:nth-child(even) {
+  background-color: #1a1919;
+}
+
+tr:hover {
+  background-color: #213547;
+}
+
+.gold {
+  color: #e5cc80;
+}
+
+.pink {
+  color: #f48cba;
+}
+
+.orange {
+  color: #ff8000;
+}
+
+.purple {
+  color: #a335ee;
+}
+
+.blue {
+  color: #0070dd;
+}
+
+.green {
+  color: #1eff00;
+}
+
+.grey {
+  color: #9d9d9d;
+}
+
+.runic-power {
+  color: lightblue;
+}
+
+.summary-line {
+  display: flex;
+  width: 400px;
+
+  .hl {
+    flex-grow: 1;
+    text-align: right;
+    margin-right: 5px;
+  }
+}
+
+.hl {
+  color: #46c5ff;
+}
+
+.fight-summary {
+  font-size: 20px;
+}
+
+.fight-analysis {
+  font-size: 16px;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  width: 100%;
+
+  .fa {
+    margin-right: 5px;
+    width: 20px;
+    text-align: center;
+  }
+
+  > div {
+    margin-bottom: 2px;
+  }
+
+  h3 {
+    color: #e5cc80;
+  }
+}
+
+.rune-cd {
+  filter: brightness(40%) grayscale(1);
+}
+
+.analysis-summary h2 {
+  text-align: center;
+  color: #e5cc80;
+}
+
+.events-table {
+  margin-top: 10px;
+  margin-bottom: 10px;
+
+  table {
+    min-width: 1000px;
+  }
+}
+
+.analysis-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  flex-direction: column;
+}
+
+.windows {
+  margin-left: 20px;
+}
+
+.gargoyle-window {
+  margin-top: 12px;
+
+  > div {
+    margin-bottom: 2px;
+  }
+}
+
+.gargoyle-window:nth-child(even) {
+  margin-top: 20px;
+}
+
+.gargoyle-subheader {
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
+
+.usage-analysis {
+  white-space: pre;
+}
+
+.ability,
+.buffs,
+.procs-used {
+  display: flex;
+  align-items: center;
+}
+
+td img {
+  padding-right: 5px;
+}
+
+td .rune {
+  padding-right: 1px;
+}
+
+.timestamp {
+  color: darkgrey;
+}
+
+.runes {
+  display: inline-block;
+}
+
+.runes:not(:last-child) {
+  padding-right: 15px;
+}
+
+.red {
+  color: red;
+}
+
+.yellow {
+  color: yellow;
+}
+
+.debuff-drops,
+.ability-miss {
+  background: #3b0610 !important;
+}
+
+.buff-drops {
+  color: darkgrey;
+}
+
+.filler-cast {
+  padding-left: 20px;
+}
+
+.ability-type-0 {
+  color: #46c5ff;
+}
+
+.ability-type-1 {
+  color: #e5cc80;
+}
+
+.ability-type-4 {
+  color: #eb4561;
+}
+
+.ability-type-16 {
+  color: #4a80ff;
+}
+
+.ability-type-32 {
+  color: #b8a8f0;
+}
+
+.uptime-score {
+  display: inline-block;
+  text-align: right;
+  flex-grow: 1;
+}
+
+.uptime {
+  width: 450px;
+  display: flex;
+}
+
+.centered {
+  display: flex;
+  align-items: center;
+}
+
+.icon {
+  margin-left: 5px;
+  margin-right: 5px;
+}
