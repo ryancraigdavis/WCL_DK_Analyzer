@@ -90,38 +90,32 @@ class Analyzer:
 
             self._buff_tracker = BuffTracker(
                 {
-                    "Unbreakable Armor",
+                    "Pillar of Frost",
                     "Heroism",
                     "Bloodlust",
-                    "Speed",
+                    "Slayer",
+                    "Thrill of Victory",
+                    "Heartened",
+                    "Race Against Death",
+                    "Eye of Doom",
+                    "Typhoon",
+                    "Polarization",
+                    "King of Boars",
+                    "Fatality",
+                    "Golem's Strength",
                     "Rime",
-                    "Meteorite Whetstone",
-                    "Hyperspeed Acceleration",
-                    "Reflection of Torment",
-                    "Greatness",
+                    "Synapse Springs",
+                    "Sudden Doom",
                     "Killing Machine",
-                    "Grim Toll",
-                    "Indestructible",
-                    "Mark of Norgannon",
                     "Berserking",
                     "Blood Fury",
-                    "Black Magic",
                     "Swordguard Embroidery",
                     "Unholy Strength",
-                    "Skyflare Swiftness",
-                    "Edward's Insight",
-                    "Loatheb's Shadow",
                     "Cinderglacier",
-                    "Mjolnir Runestone",
-                    "Implosion",  # Dark Matter
-                    "Comet's Trail",
-                    "Wrathstone",
-                    "Blood of the Old God",
-                    "Pyrite Infusion",
-                    "Fury of the Five Flights",
-                    "Desolation",
-                    "Unholy Force",  # Sigil
-                    "Unholy Might",  # T9 2p
+                    "Death Eater",  # T11 4pc
+                    "Smoldering Rune",  # T12 2pc
+                    "Runic Corruption",
+                    "Unholy Frenzy",
                     "Blood Presence",
                     "Unholy Presence",
                     "Frost Presence",
@@ -145,17 +139,7 @@ class Analyzer:
                         return "Frost"
                     if event["type"] == "cast" and event["ability"] in (
                         "Summon Gargoyle",
-                        "Ghoul Frenzy",
-                    ):
-                        return "Unholy"
-
-                # If the above doesn't work, then try with less determinate spells
-                for event in self._events:
-                    if event["type"] == "cast" and event["ability"] == "Obliterate":
-                        return "Frost"
-                    if (
-                        event["type"] == "cast"
-                        and event["ability"] == "Death and Decay"
+                        "Unholy Frenzy",
                     ):
                         return "Unholy"
 

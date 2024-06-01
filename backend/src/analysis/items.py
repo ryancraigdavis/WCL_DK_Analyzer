@@ -30,10 +30,10 @@ class APTrinket(Trinket):
     #     return False
 
 
-# class HasteTrinket(Trinket):
-#     @property
-#     def snapshots_gargoyle(self):
-#         return False
+class HasteTrinket(Trinket):
+    @property
+    def snapshots_gargoyle(self):
+        return False
 
 #     @property
 #     def snapshots_army_haste(self):
@@ -49,7 +49,16 @@ class TrinketPreprocessor(BasePreprocessor):
         APTrinket("License to Slay", 58180, "Slayer", 15, 100),
         APTrinket("Impatience of Youth", 62464, "Thrill of Victory", 20, 120, on_use=True),
         APTrinket("Impatience of Youth", 62469, "Thrill of Victory", 20, 120, on_use=True),
-        # HasteTrinket("Comet's Trail", 45609, "Comet's Trail", 10, 45),
+        APTrinket("Might of the Ocean", 56285, "Typhoon", 15, 90, on_use=True),
+        APTrinket("Might of the Ocean", 55251, "Typhoon", 15, 90, on_use=True),
+        APTrinket("Magnetite Mirror", 56345, "Polarization", 15, 90, on_use=True),
+        APTrinket("Magnetite Mirror", 55814, "Polarization", 15, 90, on_use=True),
+        APTrinket("King of Boars", 52351, "King of Boars", 20, 120, on_use=True),
+        APTrinket("Heart of Solace", 56393, "Heartened", 20, 100),
+        APTrinket("Heart of Solace", 55868, "Heartened", 20, 100),
+        HasteTrinket("Crushing Weight", 65118, "Race Against Death", 15, 75),
+        HasteTrinket("Crushing Weight", 59506, "Race Against Death", 15, 75),
+        HasteTrinket("Shrine-Cleansing Purifier", 63838, "Fatality", 20, 100),
     ]
     TRINKET_MAP = {trinket.item_id: trinket for trinket in TRINKETS}
     TRINKEY_MAP_BY_BUFF_NAME = {trinket.buff_name: trinket for trinket in TRINKETS}
