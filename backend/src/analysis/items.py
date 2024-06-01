@@ -181,51 +181,14 @@ class T9Preprocessor(BasePreprocessor):
         return 0.28
 
 
-class SigilPreprocessor(BasePreprocessor):
-    class Sigil:
-        def __init__(self, name, item_id, buff_name, max_uptime):
-            self.name = name
-            self.item_id = item_id
-            self.buff_name = buff_name
-            self.max_uptime = max_uptime
-
-    _sigils = [
-        Sigil("Sigil of Virulence", 47673, "Unholy Force", 0.70),
-    ]
-    _sigil_map = {sigil.item_id: sigil for sigil in _sigils}
-    _sigil_buff_name_map = {sigil.buff_name: sigil for sigil in _sigils}
-
-    def __init__(self, combatant_info):
-        self.sigil = None
-        self._calc_sigil(combatant_info)
-
-    def _calc_sigil(self, combatant_info):
-        for item in combatant_info.get("gear", []):
-            if item["id"] in self._sigil_map:
-                self.sigil = self._sigil_map[item["id"]]
-                break
-
-    def preprocess_event(self, event):
-        if self.sigil:
-            return
-
-        if (
-            event["type"] == "applybuff"
-            and event["ability"] in self._sigil_buff_name_map
-        ):
-            self.sigil = self._sigil_buff_name_map[event["ability"]]
-
-
 class ItemPreprocessor(BasePreprocessor):
     def __init__(self, combatant_info):
         self._trinkets = TrinketPreprocessor(combatant_info)
         self._t9 = T9Preprocessor(combatant_info)
-        self._sigil = SigilPreprocessor(combatant_info)
 
         self._processors = [
             self._trinkets,
             self._t9,
-            self._sigil,
         ]
 
     def preprocess_event(self, event):
@@ -244,7 +207,3 @@ class ItemPreprocessor(BasePreprocessor):
     @property
     def trinkets(self):
         return list(self._trinkets)
-
-    @property
-    def sigil(self):
-        return self._sigil.sigil
