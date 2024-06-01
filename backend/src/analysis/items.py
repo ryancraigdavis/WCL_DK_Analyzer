@@ -15,9 +15,9 @@ class Trinket:
     def snapshots_gargoyle(self):
         raise NotImplementedError
 
-    @property
-    def snapshots_army_haste(self):
-        raise NotImplementedError
+    # @property
+    # def snapshots_army_haste(self):
+    #     raise NotImplementedError
 
 
 class APTrinket(Trinket):
@@ -25,49 +25,31 @@ class APTrinket(Trinket):
     def snapshots_gargoyle(self):
         return True
 
-    @property
-    def snapshots_army_haste(self):
-        return False
+    # @property
+    # def snapshots_army_haste(self):
+    #     return False
 
 
-class HasteTrinket(Trinket):
-    @property
-    def snapshots_gargoyle(self):
-        return False
+# class HasteTrinket(Trinket):
+#     @property
+#     def snapshots_gargoyle(self):
+#         return False
 
-    @property
-    def snapshots_army_haste(self):
-        return True
+#     @property
+#     def snapshots_army_haste(self):
+#         return True
 
 
 class TrinketPreprocessor(BasePreprocessor):
     TRINKETS = [
-        APTrinket("Darkmoon Card: Greatness", 42987, "Greatness", 15, 45),
-        APTrinket("Wrathstone", 45263, "Wrathstone", 20, 120, on_use=True),
-        APTrinket("Blood of the Old God", 45522, "Blood of the Old God", 10, 50),
-        APTrinket("Pyrite Infuser", 45286, "Pyrite Infusion", 10, 50),
-        APTrinket("Mirror of Truth", 40684, "Reflection of Torment", 10, 50),
-        APTrinket("Death's Choice", 47464, "Paragon", 15, 45),
-        APTrinket("Death's Choice", 47303, "Paragon", 15, 45),
-        APTrinket("Death's Verdict", 47131, "Paragon", 15, 45),
-        APTrinket("Death's Verdict", 47115, "Paragon", 15, 45),
-        APTrinket("Victor's Call", 47725, "Rising Fury", 20, 120, on_use=True),
-        APTrinket("Victor's Call", 47948, "Rising Fury", 20, 120, on_use=True),
-        APTrinket(
-            "Vengeance of the Forsaken", 47881, "Rising Fury", 20, 120, on_use=True
-        ),
-        APTrinket(
-            "Vengeance of the Forsaken", 48020, "Rising Fury", 20, 120, on_use=True
-        ),
-        APTrinket("Mark of Supremacy", 47734, "Rage", 20, 120, on_use=True),
-        HasteTrinket(
-            "Mark of Norgannon", 40531, "Mark of Norgannon", 20, 120, on_use=True
-        ),
-        HasteTrinket("Comet's Trail", 45609, "Comet's Trail", 10, 45),
-        HasteTrinket("Meteorite Whetstone", 37390, "Meteorite Whetstone", 10, 45),
-        HasteTrinket(
-            "Shard of the Crystal Heart", 48722, "Celerity", 20, 120, on_use=True
-        ),
+        APTrinket("Right Eye of Rajh", 56100, "Eye of Doom", 10, 50),
+        APTrinket("Right Eye of Rajh", 56431, "Eye of Doom", 10, 50),
+        APTrinket("Heart of Rage", 65072, "Rageheart", 20, 100),
+        APTrinket("Heart of Rage", 59224, "Rageheart", 20, 100),
+        APTrinket("License to Slay", 58180, "Slayer", 15, 100),
+        APTrinket("Impatience of Youth", 62464, "Thrill of Victory", 20, 120, on_use=True),
+        APTrinket("Impatience of Youth", 62469, "Thrill of Victory", 20, 120, on_use=True),
+        # HasteTrinket("Comet's Trail", 45609, "Comet's Trail", 10, 45),
     ]
     TRINKET_MAP = {trinket.item_id: trinket for trinket in TRINKETS}
     TRINKEY_MAP_BY_BUFF_NAME = {trinket.buff_name: trinket for trinket in TRINKETS}
