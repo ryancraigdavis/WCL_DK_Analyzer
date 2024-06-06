@@ -19,8 +19,9 @@ class DeadZoneAnalyzer(BasePreprocessor):
         "Melee",
         "Obliterate",
         "Frost Strike",
-        "Blood Strike",
+        "Festering Strike",
         "Plague Strike",
+        "Scourge Strike",
         "Pestilence",
     }
 
@@ -573,11 +574,11 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
 
     @property
     def has_flask(self):
-        return bool(self._num_windows("Flask of Endless Rage"))
+        return bool(self._num_windows("Flask of Titanic Strength"))
 
     @property
     def num_pots(self):
-        return self._num_windows("Speed") + self._num_windows("Indestructible")
+        return self._num_windows("Golem's Strength")
 
     @property
     def has_berserking(self):
@@ -615,11 +616,9 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
                             presence_windows.pop()
                 windows.add_window(0)
         elif event["type"] == "applybuff":
-            if event["ability"] in ("Speed", "Indestructible"):
-                if self.is_active("Speed", event["timestamp"]):
-                    self._buff_windows["Speed"].pop()
-                elif self.is_active("Indestructible", event["timestamp"]):
-                    self._buff_windows["Indestructible"].pop()
+            if event["ability"] in ("Golem's Strength"):
+                if self.is_active("Golem's Strength", event["timestamp"]):
+                    self._buff_windows["Golem's Strength"].pop()
 
             if not windows.has_active_window:
                 windows.add_window(event["timestamp"])
@@ -762,25 +761,28 @@ class RPAnalyzer(BaseAnalyzer):
 
 class GCDAnalyzer(BaseAnalyzer):
     NO_GCD = {
-        "Unbreakable Armor",
+        "Pillar of Frost",
         "Blood Tap",
         "Global Thermal Sapper Charge",
         "Saronite Bomb",
-        "Speed",
+        "Golem's Strength",
         "Empower Rune Weapon",
         "Cobalt Frag Bomb",
-        "Hyperspeed Acceleration",
+        "Big Daddy",
+        "Synapse Springs",
         "Blood Fury",
         "Berserking",
-        "Indestructible",
-        "Deathchill",
         "Melee",
         "Path of Illidan",
         "Anti-Magic Shell",
         "Unholy Frenzy",
-        "Wrathstone",
-        "Mark of Norgannon",
         "Mind Freeze",
+        "Thrill of Victory",
+        "Typhoon",
+        "Polarization",
+        "King of Boars",
+        "Forged Fury",
+        "Battle Prowess",
         "Blood Presence",
         "Frost Presence",
         "Unholy Presence",
@@ -865,7 +867,7 @@ class GCDAnalyzer(BaseAnalyzer):
 
 
 class DiseaseAnalyzer(BaseAnalyzer):
-    DISEASE_DURATION_MS = 15000
+    DISEASE_DURATION_MS = 33000
 
     def __init__(self, encounter_name, fight_end_time):
         self._dropped_diseases_timestamp = []
@@ -932,6 +934,8 @@ class BombAnalyzer(BaseAnalyzer):
         self._fight_duration = fight_duration
         self._num_thermals = 0
         self._num_saronites = 0
+        self._num_big_daddys = 0
+        self._num_explosive_bolts = 0
 
     def add_event(self, event):
         if event["type"] != "cast":
@@ -942,6 +946,12 @@ class BombAnalyzer(BaseAnalyzer):
 
         if event["ability"] == "Saronite Bomb":
             self._num_saronites += 1
+
+        if event["ability"] == "Big Daddy":
+            self._num_big_daddys += 1
+
+        if event["ability"] == "Explosive Bolts":
+            self._num_explosive_bolts += 1
 
     @property
     def possible_thermals(self):
@@ -1010,14 +1020,16 @@ class CoreAbilities(BaseAnalyzer):
     CORE_ABILITIES = {
         "Icy Touch",
         "Plague Strike",
-        "Unbreakable Armor",
+        "Pillar of Frost",
         "Obliterate",
         "Pestilence",
         "Howling Blast",
-        "Blood Strike",
-        "Blood Boil",
+        "Scourge Strike",
+        "Festering Strike",
+        "Dark Transformation",
+        "Death Coil",
+        "Frost Strike",
         "Death and Decay",
-        "Ghoul Frenzy",
     }
 
     def add_event(self, event):
@@ -1131,7 +1143,7 @@ class TrinketAnalyzer(BaseAnalyzer):
         )
 
 
-class T9UptimeAnalyzer(BaseAnalyzer):
+class T11UptimeAnalyzer(BaseAnalyzer):
     def __init__(
         self,
         fight_duration,
@@ -1141,43 +1153,42 @@ class T9UptimeAnalyzer(BaseAnalyzer):
     ):
         self._fight_duration = fight_duration
         self._items = items
-        self._has_2p = items.has_t9_2p()
-        self._t9_uptime = BuffUptimeAnalyzer(
+        self._has_4p = items.has_t11_4p()
+        self._t11_uptime = BuffUptimeAnalyzer(
             fight_duration,
             buff_tracker,
             ignore_windows,
-            "Unholy Might",
+            "Death Eater",
         )
 
     def add_event(self, event):
-        if not self._has_2p:
+        if not self._has_4p:
             return
 
-        self._t9_uptime.add_event(event)
+        self._t11_uptime.add_event(event)
 
     def report(self):
-        if not self._has_2p:
+        if not self._has_4p:
             return {}
 
         return {
-            "t9_uptime": self._t9_uptime.uptime(),
-            "t9_max_uptime": self._items.t9_max_uptime(),
+            "t11_uptime": self._t11_uptime.uptime(),
+            "t11_max_uptime": self._items.t11_max_uptime(),
         }
 
     def score(self):
-        if not self._has_2p:
+        if not self._has_4p:
             return 0
 
-        return min(self._t9_uptime.score() / self._items.t9_max_uptime(), 1)
+        return min(self._t11_uptime.score() / self._items.t11_max_uptime(), 1)
 
     def score_weight(self):
-        if not self._has_2p:
+        if not self._has_4p:
             return 0
 
         return 2
 
-
-class SigilUptimeAnalyzer(BaseAnalyzer):
+class T12UptimeAnalyzer(BaseAnalyzer):
     def __init__(
         self,
         fight_duration,
@@ -1186,45 +1197,42 @@ class SigilUptimeAnalyzer(BaseAnalyzer):
         ignore_windows,
     ):
         self._fight_duration = fight_duration
-        self._sigil_uptime = (
-            BuffUptimeAnalyzer(
-                fight_duration,
-                buff_tracker,
-                ignore_windows,
-                items.sigil.buff_name,
-            )
-            if items.sigil
-            else None
-        )
         self._items = items
+        self._has_2p = items.has_t12_2p()
+        self._t12_uptime = BuffUptimeAnalyzer(
+            fight_duration,
+            buff_tracker,
+            ignore_windows,
+            "Death Eater",
+        )
 
     def add_event(self, event):
-        if not self._sigil_uptime:
+        if not self._has_2p:
             return
 
-        self._sigil_uptime.add_event(event)
+        self._t12_uptime.add_event(event)
 
     def report(self):
-        if not self._sigil_uptime:
+        if not self._has_2p:
             return {}
 
         return {
-            "sigil_uptime": self._sigil_uptime.uptime(),
-            "sigil_max_uptime": self._items.sigil.max_uptime,
-            "sigil_name": self._items.sigil.name,
+            "t12_uptime": self._t12_uptime.uptime(),
+            "t12_max_uptime": self._items.t12_max_uptime(),
         }
 
     def score(self):
-        if not self._sigil_uptime:
+        if not self._has_2p:
             return 0
 
-        return min(self._sigil_uptime.score() / self._items.sigil.max_uptime, 1)
+        return min(self._t12_uptime.score() / self._items.t12_max_uptime(), 1)
 
     def score_weight(self):
-        if not self._sigil_uptime:
+        if not self._has_2p:
             return 0
 
         return 2
+
 
 
 class BuffUptimeAnalyzer(BaseAnalyzer):
@@ -1310,11 +1318,11 @@ class CoreAnalysisScorer(AnalysisScorer):
             TrinketAnalyzer: {
                 "weight": lambda ta: ta.num_on_use_trinkets,
             },
-            T9UptimeAnalyzer: {
-                "weight": lambda t9a: t9a.score_weight(),
+            T11UptimeAnalyzer: {
+                "weight": lambda t11a: t11a.score_weight(),
             },
-            SigilUptimeAnalyzer: {
-                "weight": lambda sa: sa.score_weight(),
+            T12UptimeAnalyzer: {
+                "weight": lambda t12a: t12a.score_weight(),
             },
         }
 
@@ -1339,10 +1347,10 @@ class CoreAnalysisConfig:
             HyperspeedAnalyzer(fight.duration),
             MeleeUptimeAnalyzer(fight.duration, dead_zone_analyzer.get_dead_zones()),
             TrinketAnalyzer(fight.duration, items),
-            T9UptimeAnalyzer(
+            T11UptimeAnalyzer(
                 fight.duration, buff_tracker, items, dead_zone_analyzer.get_dead_zones()
             ),
-            SigilUptimeAnalyzer(
+            T12UptimeAnalyzer(
                 fight.duration, buff_tracker, items, dead_zone_analyzer.get_dead_zones()
             ),
         ]

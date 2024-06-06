@@ -54,6 +54,7 @@ class TrinketPreprocessor(BasePreprocessor):
         APTrinket("Magnetite Mirror", 56345, "Polarization", 15, 90, on_use=True),
         APTrinket("Magnetite Mirror", 55814, "Polarization", 15, 90, on_use=True),
         APTrinket("King of Boars", 52351, "King of Boars", 20, 120, on_use=True),
+        APTrinket("Fury of Angerforge", 59461, "Forged Fury", 20, 120, on_use=True),
         APTrinket("Heart of Solace", 56393, "Heartened", 20, 100),
         APTrinket("Heart of Solace", 55868, "Heartened", 20, 100),
         HasteTrinket("Crushing Weight", 65118, "Race Against Death", 15, 75),
@@ -196,6 +197,12 @@ class ItemPreprocessor(BasePreprocessor):
 
     def has_trinket(self, buff_name):
         return self._trinkets.has_trinket(buff_name)
+
+    def has_t11_4p(self):
+        return self._t11.has_4p
+
+    def has_t12_2p(self):
+        return self._t12.has_2p
 
     def t11_max_uptime(self):
         return self._t11.max_uptime
