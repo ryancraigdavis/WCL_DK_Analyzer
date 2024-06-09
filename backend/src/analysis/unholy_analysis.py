@@ -344,6 +344,7 @@ class GhoulAnalyzer(BaseAnalyzer):
     def __init__(self, fight_duration, ignore_windows):
         self._fight_duration = fight_duration
         self._num_claws = 0
+        self._num_sweeping_claws = 0
         self._num_gnaws = 0
         self._melee_uptime = MeleeUptimeAnalyzer(
             fight_duration,
@@ -387,9 +388,12 @@ class GhoulAnalyzer(BaseAnalyzer):
             self._window = Window(0)
             self._windows.append(self._window)
 
-        if event["is_owner_pet_source"]:
+
+        if event["source"] == "Ghoul":
             if event["type"] == "cast" and event["ability"] == "Claw":
                 self._num_claws += 1
+            elif event["type"] == "cast" and event["ability"] == "Sweeping Claws":
+                self._num_sweeping_claws += 1
             elif event["type"] == "cast" and event["ability"] == "Gnaw":
                 self._num_gnaws += 1
             elif event["type"] == "damage":
@@ -424,6 +428,7 @@ class GhoulAnalyzer(BaseAnalyzer):
             "ghoul": {
                 "score": self.score(),
                 "num_claws": self._num_claws,
+                "num_sweeping_claws": self._num_sweeping_claws,
                 "num_gnaws": self._num_gnaws,
                 "melee_uptime": self._melee_uptime.uptime(),
                 "uptime": self.uptime(),
