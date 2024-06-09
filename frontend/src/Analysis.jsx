@@ -113,14 +113,14 @@ const Summary = () => {
       return (
         <div className={"flask-usage"}>
           <i className="fa fa-check green" aria-hidden="true"></i>
-          You had a Flask of Endless Rage
+          You had a Flask of Titanic Strength
         </div>
       );
     }
     return (
       <div className={"flask-usage"}>
         <i className="fa fa-times red" aria-hidden="true"></i>
-        You did not have a Flask of Endless Rage
+        You did not have a Flask of Titanic Strength
       </div>
     );
   }, []);
@@ -379,7 +379,7 @@ const Summary = () => {
           <h3>Rotation</h3>
           {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
           {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
-          // {summary.ghoul_frenzy_uptime !== undefined && formatUpTime(summary.ghoul_frenzy_uptime, "Ghoul Frenzy", false, summary.ghoul_frenzy_max_uptime)}
+          {summary.ghoul_frenzy_uptime !== undefined && formatUpTime(summary.ghoul_frenzy_uptime, "Ghoul Frenzy", false, summary.ghoul_frenzy_max_uptime)}
           {summary.t11_uptime !== undefined && formatUpTime(summary.t11_uptime, "Death Eater (T11 4p)", false, summary.t11_max_uptime)}
           {summary.melee_uptime !== undefined && formatUpTime(summary.melee_uptime, "Melee")}
           {summary.unbreakable_armor && formatUA(summary.unbreakable_armor)}
@@ -387,7 +387,6 @@ const Summary = () => {
           {summary.frost_fever_uptime !== undefined && formatUpTime(summary.frost_fever_uptime, "Frost Fever")}
           {summary.unholy_presence_uptime !== undefined && formatUpTime(summary.unholy_presence_uptime, "Unholy Presence")}
           {summary.blood_tap_usages !== undefined && formatUsage(summary.blood_tap_usages, summary.blood_tap_max_usages, "Blood Tap")}
-          // {summary.bone_shield_uptime !== undefined && formatUpTime(summary.bone_shield_uptime, "Bone Shield", true)}
           {summary.diseases_dropped && formatDiseases(summary.diseases_dropped)}
           {summary.raise_dead_usage && formatUsage(summary.raise_dead_usage.num_usages, summary.raise_dead_usage.possible_usages, "Raise Dead")}
           {summary.howling_blast_bad_usages && formatHowlingBlast(summary.howling_blast_bad_usages)}
@@ -420,10 +419,10 @@ const Summary = () => {
               )}
             </div>
           ))}
-          {summary.hyperspeed && formatUsage(
-            summary.hyperspeed.num_actual,
-            summary.hyperspeed.num_possible,
-            "Hyperspeed Accelerators",
+          {summary.synapse && formatUsage(
+            summary.synapse.num_actual,
+            summary.synapse.num_possible,
+            "Synapse Springs",
           )}
           {summary.potion_usage && formatPotions(summary.potion_usage)}
           {summary.bomb_usage && formatUsage(

@@ -320,7 +320,7 @@ class DeathAndDecayUptimeAnalyzer(BaseAnalyzer):
 
     @property
     def max_uptime(self):
-        return 9 / 20
+        return 13 / 40
 
     def uptime(self):
         return self._dnd_ticks / (self._fight_duration // 1000)
