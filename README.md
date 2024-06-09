@@ -57,3 +57,5 @@ To run the WCL DK Analyzer for Cataclysm Classic Chrome extension locally, it is
 By following these steps, you will have the WCL DK Analyzer for Cataclysm Classic Chrome extension set up and running locally on your machine. This allows you to make modifications to the extension's code and test them in real-time.
 
 Remember to keep both the backend and frontend servers running while using the extension. If you encounter any issues, make sure to double-check the extension ID and ensure that the servers are running correctly.
+
+The Cataclysm version of the WCL Analyzer is built on the Wrath Analyzer created by Ducks - it can be found here: https://github.com/lime-green/WCL-dk-analysis
