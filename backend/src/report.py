@@ -48,7 +48,7 @@ SPELL_TRANSLATIONS = {
     45477: "Icy Touch",
     45462: "Plague Strike",
     77575: "Outbreak",
-    96229: "Hyperspeed Acceleration",
+    96229: "Synapse Springs",
     49020: "Obliterate",
     49143: "Frost Strike",
     49184: "Howling Blast",

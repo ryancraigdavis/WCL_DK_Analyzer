@@ -5,7 +5,7 @@ from analysis.core_analysis import (
     CoreAnalysisConfig,
     DiseaseAnalyzer,
     GCDAnalyzer,
-    HyperspeedAnalyzer,
+    SynapseSpringsAnalyzer,
     MeleeUptimeAnalyzer,
     RuneTracker,
     TrinketAnalyzer,
@@ -426,7 +426,7 @@ class FrostAnalysisScorer(AnalysisScorer):
             BombAnalyzer: {
                 "weight": 2,
             },
-            HyperspeedAnalyzer: {
+            SynapseSpringsAnalyzer: {
                 "weight": 1,
             },
             TrinketAnalyzer: {

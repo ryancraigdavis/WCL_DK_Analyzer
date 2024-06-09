@@ -987,31 +987,31 @@ class BombAnalyzer(BaseAnalyzer):
         }
 
 
-class HyperspeedAnalyzer(BaseAnalyzer):
+class SynapseSpringsAnalyzer(BaseAnalyzer):
     def __init__(self, fight_duration):
         self._fight_duration = fight_duration
-        self._num_hyperspeeds = 0
+        self._num_synapse_springs = 0
 
     def add_event(self, event):
-        if event["type"] == "cast" and event["ability"] == "Hyperspeed Acceleration":
-            self._num_hyperspeeds += 1
+        if event["type"] == "cast" and event["ability"] == "Synapse Springs":
+            self._num_synapse_springs += 1
 
     @property
-    def possible_hyperspeeds(self):
-        return max(1 + (self._fight_duration - 5000) // 63000, self._num_hyperspeeds)
+    def possible_synapse_springs(self):
+        return max(1 + (self._fight_duration - 5000) // 63000, self._num_synapse_springs)
 
     def score(self):
         return (
-            self._num_hyperspeeds / self.possible_hyperspeeds
-            if self.possible_hyperspeeds
+            self._num_synapse_springs / self.possible_synapse_springs
+            if self.possible_synapse_springs
             else 1
         )
 
     def report(self):
         return {
-            "hyperspeed": {
-                "num_possible": self.possible_hyperspeeds,
-                "num_actual": self._num_hyperspeeds,
+            "synapse_springs": {
+                "num_possible": self.possible_synapse_springs,
+                "num_actual": self._num_synapse_springs,
             }
         }
 
@@ -1309,7 +1309,7 @@ class CoreAnalysisScorer(AnalysisScorer):
             BombAnalyzer: {
                 "weight": 2,
             },
-            HyperspeedAnalyzer: {
+            SynapseSpringsAnalyzer: {
                 "weight": 2,
             },
             MeleeUptimeAnalyzer: {
@@ -1344,7 +1344,7 @@ class CoreAnalysisConfig:
             RPAnalyzer(),
             CoreAbilities(),
             BombAnalyzer(fight.duration),
-            HyperspeedAnalyzer(fight.duration),
+            SynapseSpringsAnalyzer(fight.duration),
             MeleeUptimeAnalyzer(fight.duration, dead_zone_analyzer.get_dead_zones()),
             TrinketAnalyzer(fight.duration, items),
             T11UptimeAnalyzer(

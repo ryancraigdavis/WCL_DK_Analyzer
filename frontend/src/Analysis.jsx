@@ -419,9 +419,9 @@ const Summary = () => {
               )}
             </div>
           ))}
-          {summary.synapse && formatUsage(
-            summary.synapse.num_actual,
-            summary.synapse.num_possible,
+          {summary.synapse_springs && formatUsage(
+            summary.synapse_springs.num_actual,
+            summary.synapse_springs.num_possible,
             "Synapse Springs",
           )}
           {summary.potion_usage && formatPotions(summary.potion_usage)}

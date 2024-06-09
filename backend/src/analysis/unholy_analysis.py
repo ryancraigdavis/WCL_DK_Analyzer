@@ -13,7 +13,7 @@ from analysis.core_analysis import (
     BombAnalyzer,
     BuffTracker,
     CoreAnalysisConfig,
-    HyperspeedAnalyzer,
+    SynapseSpringsAnalyzer,
     RPAnalyzer,
     RuneTracker,
     MeleeUptimeAnalyzer,
@@ -542,7 +542,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
             BombAnalyzer: {
                 "weight": 1,
             },
-            HyperspeedAnalyzer: {
+            SynapseSpringsAnalyzer: {
                 "weight": 2,
             },
             TrinketAnalyzer: {
