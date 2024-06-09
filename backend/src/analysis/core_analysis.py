@@ -655,10 +655,6 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
                 "has_flask": self.has_flask,
             },
         }
-        if self._spec == "Frost":
-            ret["potion_usage"] = {
-                "potions_used": self.num_pots,
-            }
         return ret
 
     def is_active(self, buff, timestamp):
