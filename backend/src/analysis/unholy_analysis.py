@@ -115,12 +115,11 @@ class GhoulFrenzyAnalyzer(BuffUptimeAnalyzer):
     INCLUDE_PET_EVENTS = True
 
     def __init__(self, duration, buff_tracker, ignore_windows, items):
-        self._has_sigil = items.sigil is not None
         super().__init__(duration, buff_tracker, ignore_windows, "Ghoul Frenzy")
 
     @property
     def max_uptime(self):
-        return 0.45 if self._has_sigil else 1
+        return 0.45
 
     def score(self):
         return min(1, self.uptime() / self.max_uptime)
@@ -130,13 +129,6 @@ class GhoulFrenzyAnalyzer(BuffUptimeAnalyzer):
             "ghoul_frenzy_uptime": self.uptime(),
             "ghoul_frenzy_max_uptime": self.max_uptime,
         }
-
-
-class UnholyPresenceUptimeAnalyzer(BuffUptimeAnalyzer):
-    def __init__(self, duration, buff_tracker, ignore_windows, start_time=0):
-        super().__init__(
-            duration, buff_tracker, ignore_windows, "Unholy Presence", start_time
-        )
 
 
 class GargoyleWindow(Window):
