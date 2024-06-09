@@ -47,6 +47,7 @@ SPELL_TRANSLATIONS = {
     75176: "Swordguard Embroidery",
     45477: "Icy Touch",
     45462: "Plague Strike",
+    77575: "Outbreak",
     96229: "Hyperspeed Acceleration",
     49020: "Obliterate",
     49143: "Frost Strike",
@@ -195,12 +196,10 @@ class Report:
                 return "Gift of the Wild"
             if ability_id == 80723:
                 return "Flask of Titanic Strength"
-            if ability_id == 25898:
-                return "Greater Blessing of Kings"
-            if ability_id in (57371, 57399, 57079, 65414, 57111, 57356, 57294):
+            if ability_id == 20217:
+                return "Blessing of Kings"
+            if ability_id == 87545:
                 return "Well Fed"
-            if ability_id == 24383:
-                return "Swiftness of Zanza"
             if ability_id in (28878, 6562):
                 return "Heroic Presence"
             if ability_id in (393387, 24932):
@@ -223,7 +222,7 @@ class Report:
             return "https://wow.zamimg.com/images/wow/icons/large/inv_inscription_tarotgreatness.jpg"
         if ability_id == 63560:
             return (
-                "https://wow.zamimg.com/images/wow/icons/large/ability_ghoulfrenzy.jpg"
+                "https://wow.zamimg.com/images/wow/icons/large/achievement_boss_festergutrotface.jpg"
             )
 
         for ability in self._abilities:

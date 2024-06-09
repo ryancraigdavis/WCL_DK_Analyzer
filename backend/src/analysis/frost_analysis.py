@@ -462,6 +462,7 @@ class FrostAnalysisConfig(CoreAnalysisConfig):
 
     def create_rune_tracker(self):
         return RuneTracker(
-            should_convert_blood=True,
+            should_convert_blood=False,
+            should_convert_frost=False,
             track_drift_type={"Frost", "Unholy"},
         )

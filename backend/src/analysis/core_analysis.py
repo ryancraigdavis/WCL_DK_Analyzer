@@ -287,7 +287,7 @@ class Rune:
 
 
 class RuneTracker(BaseAnalyzer):
-    def __init__(self, should_convert_blood, track_drift_type):
+    def __init__(self, should_convert_blood, should_convert_frost, track_drift_type):
         self.runes = [
             Rune("Blood1", "Blood"),
             Rune("Blood2", "Blood"),
@@ -299,6 +299,7 @@ class RuneTracker(BaseAnalyzer):
         self.rune_grace_wasted = 0
         self.rune_spend_error = False
         self._should_convert_blood = should_convert_blood
+        self._should_convert_frost = should_convert_frost
         self._track_drift_type = track_drift_type
 
     @property
@@ -374,13 +375,16 @@ class RuneTracker(BaseAnalyzer):
 
     def spend(self, ability, timestamp: int, blood: int, frost: int, unholy: int):
         convert_blood = self._should_convert_blood and ability in (
-            "Blood Strike",
+            "Festering Strike",
             "Pestilence",
+        )
+        convert_frost = self._should_convert_frost and ability in (
+            "Festering Strike",
         )
         blood_spend = self._spend_runes(
             blood, self.runes[0:2], timestamp, convert_blood
         )
-        frost_spend = self._spend_runes(frost, self.runes[2:4], timestamp)
+        frost_spend = self._spend_runes(frost, self.runes[2:4], timestamp, convert_frost)
         unholy_spend = self._spend_runes(unholy, self.runes[4:6], timestamp)
 
         spent = blood_spend[0] and frost_spend[0] and unholy_spend[0]

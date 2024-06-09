@@ -15,6 +15,7 @@ from analysis.core_analysis import (
     CoreAnalysisConfig,
     HyperspeedAnalyzer,
     RPAnalyzer,
+    RuneTracker,
     MeleeUptimeAnalyzer,
     TrinketAnalyzer,
     BuffUptimeAnalyzer,
@@ -111,23 +112,23 @@ class FrostFeverAnalyzer(DebuffUptimeAnalyzer):
         }
 
 
-class GhoulFrenzyAnalyzer(BuffUptimeAnalyzer):
+class DarkTransformationAnalyzer(BuffUptimeAnalyzer):
     INCLUDE_PET_EVENTS = True
 
     def __init__(self, duration, buff_tracker, ignore_windows, items):
-        super().__init__(duration, buff_tracker, ignore_windows, "Ghoul Frenzy")
+        super().__init__(duration, buff_tracker, ignore_windows, "Dark Transformation")
 
     @property
     def max_uptime(self):
-        return 0.45
+        return .7
 
     def score(self):
         return min(1, self.uptime() / self.max_uptime)
 
     def report(self):
         return {
-            "ghoul_frenzy_uptime": self.uptime(),
-            "ghoul_frenzy_max_uptime": self.max_uptime,
+            "dark_transformation_uptime": self.uptime(),
+            "dark_transformation_max_uptime": self.max_uptime,
         }
 
 
@@ -414,14 +415,9 @@ class GhoulAnalyzer(BaseAnalyzer):
 
     def score(self):
         return ScoreWeight.calculate(
-            ScoreWeight(min(1, self.claw_cpm / 15), 4),
             ScoreWeight(self.melee_uptime, 10),
             ScoreWeight(0 if self._num_gnaws else 1, 1),
         )
-
-    @property
-    def claw_cpm(self):
-        return self._num_claws / (self._fight_duration / 1000 / 60)
 
     def report(self):
         return {
@@ -431,8 +427,6 @@ class GhoulAnalyzer(BaseAnalyzer):
                 "num_gnaws": self._num_gnaws,
                 "melee_uptime": self._melee_uptime.uptime(),
                 "uptime": self.uptime(),
-                "claw_cpm": self.claw_cpm,
-                "claw_cpm_possible": 15,
                 "damage": self.total_damage,
             }
         }
@@ -514,7 +508,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "weight": 3,
                 "exponent_factor": exponent_factor,
             },
-            GhoulFrenzyAnalyzer: {
+            DarkTransformationAnalyzer: {
                 "weight": 3,
                 "exponent_factor": exponent_factor,
             },
@@ -574,7 +568,7 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
         gargoyle = GargoyleAnalyzer(fight.duration, buff_tracker, dead_zones, items)
 
         return super().get_analyzers(fight, buff_tracker, dead_zone_analyzer, items) + [
-            GhoulFrenzyAnalyzer(fight.duration, buff_tracker, dead_zones, items),
+            DarkTransformationAnalyzer(fight.duration, buff_tracker, dead_zones, items),
             gargoyle,
             BloodPlagueAnalyzer(fight.duration, dead_zones),
             FrostFeverAnalyzer(fight.duration, dead_zones),
@@ -588,3 +582,10 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
 
     def get_scorer(self, analyzers):
         return UnholyAnalysisScorer(analyzers)
+
+    def create_rune_tracker(self):
+        return RuneTracker(
+            should_convert_blood=True,
+            should_convert_frost=True,
+            track_drift_type={"Unholy"},
+        )
