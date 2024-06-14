@@ -35,6 +35,10 @@ class HasteTrinket(Trinket):
     def uptime_ghoul(self):
         return True
 
+    @property
+    def snapshots_gargoyle(self):
+        return False
+
 class TrinketPreprocessor(BasePreprocessor):
     TRINKETS = [
         APTrinket("Right Eye of Rajh", 56100, "Eye of Doom", 10, 50),

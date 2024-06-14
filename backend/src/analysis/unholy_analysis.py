@@ -1,5 +1,7 @@
 from collections import defaultdict
 from typing import List
+# import os
+# import json
 
 from analysis.base import (
     AnalysisScorer,
@@ -250,6 +252,9 @@ class DarkTransformationWindow(Window):
         for uptime in self._uptimes:
             uptime.add_event(event)
 
+    # continue figuring out first DT cast
+
+
         if event["source"] == "Ghoul":
             if (
                 event["type"] in ("cast", "startcast")
@@ -302,103 +307,103 @@ class DarkTransformationWindow(Window):
         )
 
 
-class GargoyleAnalyzer(BaseAnalyzer):
-    INCLUDE_PET_EVENTS = True
+# class GargoyleAnalyzer(BaseAnalyzer):
+#     INCLUDE_PET_EVENTS = True
 
-    def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
-        self.windows: List[GargoyleWindow] = []
-        self._window = None
-        self._buff_tracker = buff_tracker
-        self._fight_duration = fight_duration
-        self._ignore_windows = ignore_windows
-        self._items = items
+#     def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
+#         self.windows: List[GargoyleWindow] = []
+#         self._window = None
+#         self._buff_tracker = buff_tracker
+#         self._fight_duration = fight_duration
+#         self._ignore_windows = ignore_windows
+#         self._items = items
 
-    def add_event(self, event):
-        if event["type"] == "cast" and event["ability"] == "Summon Gargoyle":
-            self._window = GargoyleWindow(
-                event["timestamp"],
-                self._fight_duration,
-                self._buff_tracker,
-                self._ignore_windows,
-                self._items,
-            )
-            self.windows.append(self._window)
+#     def add_event(self, event):
+#         if event["type"] == "cast" and event["ability"] == "Summon Gargoyle":
+#             self._window = GargoyleWindow(
+#                 event["timestamp"],
+#                 self._fight_duration,
+#                 self._buff_tracker,
+#                 self._ignore_windows,
+#                 self._items,
+#             )
+#             self.windows.append(self._window)
 
-        if not self._window:
-            return
+#         if not self._window:
+#             return
 
-        self._window.add_event(event)
+#         self._window.add_event(event)
 
-    @property
-    def possible_gargoyles(self):
-        return max(1 + (self._fight_duration - 10000) // 183000, len(self.windows))
+#     @property
+#     def possible_gargoyles(self):
+#         return max(1 + (self._fight_duration - 10000) // 183000, len(self.windows))
 
-    def score(self):
-        window_score = sum(window.score() for window in self.windows)
-        used_speed = any(window.speed_uptime for window in self.windows)
-        return ScoreWeight.calculate(
-            ScoreWeight(int(used_speed), 1),
-            ScoreWeight(
-                window_score / self.possible_gargoyles, 5 * self.possible_gargoyles
-            ),
-        )
+#     def score(self):
+#         window_score = sum(window.score() for window in self.windows)
+#         used_speed = any(window.speed_uptime for window in self.windows)
+#         return ScoreWeight.calculate(
+#             ScoreWeight(int(used_speed), 1),
+#             ScoreWeight(
+#                 window_score / self.possible_gargoyles, 5 * self.possible_gargoyles
+#             ),
+#         )
 
-    def report(self):
-        return {
-            "gargoyle": {
-                "score": self.score(),
-                "num_possible": self.possible_gargoyles,
-                "num_actual": len(self.windows),
-                "bloodlust_uptime": next(
-                    (window.bl_uptime for window in self.windows if window.bl_uptime),
-                    0,
-                ),
-                "average_damage": (
-                    sum(window.total_damage for window in self.windows)
-                    / len(self.windows)
-                    if self.windows
-                    else 0
-                ),
-                "windows": [
-                    {
-                        "score": window.score(),
-                        "damage": window.total_damage,
-                        "snapshotted_greatness": window.snapshotted_greatness,
-                        "snapshotted_fc": window.snapshotted_fc,
-                        "snapshotted_sigil": window.snapshotted_sigil,
-                        "snapshotted_t9": window.snapshotted_t9,
-                        "snapshotted_bloodfury": window.snapshotted_bloodfury,
-                        "sigil_name": self._items.sigil and self._items.sigil.name,
-                        "unholy_presence_uptime": window.up_uptime,
-                        "bloodlust_uptime": window.bl_uptime,
-                        "num_casts": window.num_casts,
-                        "num_melees": window.num_melees,
-                        "speed_uptime": window.speed_uptime,
-                        "hyperspeed_uptime": window.hyperspeed_uptime,
-                        "berserking_uptime": window.berserking_uptime,
-                        "start": window.start,
-                        "end": window.end,
-                        "trinket_snapshots": [
-                            {
-                                "name": t["trinket"].name,
-                                "did_snapshot": t["did_snapshot"],
-                                "icon": t["trinket"].icon,
-                            }
-                            for t in window.trinket_snapshots
-                        ],
-                        "trinket_uptimes": [
-                            {
-                                "name": t["trinket"].name,
-                                "uptime": t["uptime"].uptime(),
-                                "icon": t["trinket"].icon,
-                            }
-                            for t in window.trinket_uptimes
-                        ],
-                    }
-                    for window in self.windows
-                ],
-            }
-        }
+#     def report(self):
+#         return {
+#             "gargoyle": {
+#                 "score": self.score(),
+#                 "num_possible": self.possible_gargoyles,
+#                 "num_actual": len(self.windows),
+#                 "bloodlust_uptime": next(
+#                     (window.bl_uptime for window in self.windows if window.bl_uptime),
+#                     0,
+#                 ),
+#                 "average_damage": (
+#                     sum(window.total_damage for window in self.windows)
+#                     / len(self.windows)
+#                     if self.windows
+#                     else 0
+#                 ),
+#                 "windows": [
+#                     {
+#                         "score": window.score(),
+#                         "damage": window.total_damage,
+#                         "snapshotted_greatness": window.snapshotted_greatness,
+#                         "snapshotted_fc": window.snapshotted_fc,
+#                         "snapshotted_sigil": window.snapshotted_sigil,
+#                         "snapshotted_t9": window.snapshotted_t9,
+#                         "snapshotted_bloodfury": window.snapshotted_bloodfury,
+#                         "sigil_name": self._items.sigil and self._items.sigil.name,
+#                         "unholy_presence_uptime": window.up_uptime,
+#                         "bloodlust_uptime": window.bl_uptime,
+#                         "num_casts": window.num_casts,
+#                         "num_melees": window.num_melees,
+#                         "speed_uptime": window.speed_uptime,
+#                         "hyperspeed_uptime": window.hyperspeed_uptime,
+#                         "berserking_uptime": window.berserking_uptime,
+#                         "start": window.start,
+#                         "end": window.end,
+#                         "trinket_snapshots": [
+#                             {
+#                                 "name": t["trinket"].name,
+#                                 "did_snapshot": t["did_snapshot"],
+#                                 "icon": t["trinket"].icon,
+#                             }
+#                             for t in window.trinket_snapshots
+#                         ],
+#                         "trinket_uptimes": [
+#                             {
+#                                 "name": t["trinket"].name,
+#                                 "uptime": t["uptime"].uptime(),
+#                                 "icon": t["trinket"].icon,
+#                             }
+#                             for t in window.trinket_uptimes
+#                         ],
+#                     }
+#                     for window in self.windows
+#                 ],
+#             }
+#         }
 
 
 class GargoyleWindow(Window):
@@ -656,7 +661,6 @@ class GhoulAnalyzer(BaseAnalyzer):
         if not self._windows:
             self._window = Window(0)
             self._windows.append(self._window)
-
 
         if event["source"] == "Ghoul":
             if event["type"] == "cast" and event["ability"] == "Claw":
