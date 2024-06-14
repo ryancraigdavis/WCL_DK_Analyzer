@@ -32,13 +32,8 @@ class APTrinket(Trinket):
 
 class HasteTrinket(Trinket):
     @property
-    def snapshots_gargoyle(self):
-        return False
-
-#     @property
-#     def snapshots_army_haste(self):
-#         return True
-
+    def uptime_ghoul(self):
+        return True
 
 class TrinketPreprocessor(BasePreprocessor):
     TRINKETS = [

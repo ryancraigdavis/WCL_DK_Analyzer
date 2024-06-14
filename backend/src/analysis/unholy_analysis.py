@@ -189,6 +189,8 @@ class DarkTransformationWindow(Window):
             self._uptimes.append(self._unholy_frenzy_uptime)
         if self._crushing_weight_uptime:
             self._uptimes.append(self._crushing_weight_uptime)
+        if self._shrine_purifying_uptime:
+            self._uptimes.append(self._shrine_purifying_uptime)
 
         self.num_attacks = 0
         self.total_damage = 0
@@ -197,20 +199,8 @@ class DarkTransformationWindow(Window):
         self.trinket_uptimes = []
 
         for trinket in self._items.trinkets:
-            if trinket.snapshots_gargoyle:
-                self._snapshottable_trinkets.append(trinket)
-            else:
+            if trinket.uptime_ghoul:
                 self._uptime_trinkets.append(trinket)
-
-        for snapshottable_trinket in self._snapshottable_trinkets:
-            self.trinket_snapshots.append(
-                {
-                    "trinket": snapshottable_trinket,
-                    "did_snapshot": buff_tracker.is_active(
-                        snapshottable_trinket.buff_name, start
-                    ),
-                }
-            )
 
         for uptime_trinket in self._uptime_trinkets:
             uptime = BuffUptimeAnalyzer(
@@ -232,27 +222,27 @@ class DarkTransformationWindow(Window):
             )
 
     @property
-    def up_uptime(self):
-        return self._up_uptime.uptime()
+    def unholy_frenzy_uptime(self):
+        return self._unholy_frenzy_uptime.uptime() if self._unholy_frenzy_uptime else None
 
     @property
     def bl_uptime(self):
-        return self._bl_uptime.uptime()
+        return self._bl_uptime.uptime() if self._bl_uptime else None
 
     @property
-    def speed_uptime(self):
-        return self._speed_uptime.uptime()
+    def crushing_weight_uptime(self):
+        return self._crushing_weight_uptime.uptime() if self._crushing_weight_uptime else None
 
     @property
-    def hyperspeed_uptime(self):
-        return self._hyperspeed_uptime.uptime()
+    def shrine_purifying_uptime(self):
+        return self._shrine_purifying_uptime.uptime() if self._shrine_purifying_uptime else None
 
     @property
     def berserking_uptime(self):
         return self._berserking_uptime.uptime() if self._berserking_uptime else None
 
-    def _set_gargoyle_first_cast(self, event):
-        self._gargoyle_first_cast = event["timestamp"]
+    def _set_dark_transformation_first_attack(self, event):
+        self._dark_transformation_first_attack = event["timestamp"]
         for uptime in self._uptimes:
             uptime.set_start_time(event["timestamp"])
 
@@ -260,7 +250,7 @@ class DarkTransformationWindow(Window):
         for uptime in self._uptimes:
             uptime.add_event(event)
 
-        if event["source"] == "Ebon Gargoyle":
+        if event["source"] == "Ghoul":
             if (
                 event["type"] in ("cast", "startcast")
                 and self._gargoyle_first_cast is None

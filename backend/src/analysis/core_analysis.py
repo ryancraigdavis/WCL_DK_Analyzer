@@ -585,6 +585,22 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
         return self._num_windows("Golem's Strength")
 
     @property
+    def has_bl(self):
+        return bool(self._num_windows("Bloodlust")) or bool(self._num_windows("Heroism")) or bool(self._num_windows("Time Warp"))
+
+    @property
+    def has_crushing_weight(self):
+        return bool(self._num_windows("Race Against Death"))
+
+    @property
+    def has_fatality(self):
+        return bool(self._num_windows("Fatality"))
+
+    @property
+    def has_unholy_frenzy(self):
+        return bool(self._num_windows("Unholy Frenzy"))
+
+    @property
     def has_berserking(self):
         return bool(self._num_windows("Berserking"))
 
