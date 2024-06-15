@@ -252,58 +252,53 @@ class DarkTransformationWindow(Window):
         for uptime in self._uptimes:
             uptime.add_event(event)
 
-    # continue figuring out first DT cast
-
-
         if event["source"] == "Ghoul":
-            if (
-                event["type"] in ("cast", "startcast")
-                and self._gargoyle_first_cast is None
-            ):
-                self._set_gargoyle_first_cast(event)
-            if event["type"] == "cast":
-                if event["ability"] == "Melee":
-                    self.num_melees += 1
-                if event["ability"] == "Gargoyle Strike":
-                    self.num_casts += 1
-
-        if event["type"] == "damage" and event["source"] == "Ebon Gargoyle":
-            self.total_damage += event["amount"]
+            if self._dark_transformation_first_attack is None:
+                # if event["type"] == "damage" and event["ability"] in ("Melee", "Claw", "Sweeping Claws", "Gnaw"):
+                #     self._set_dark_transformation_first_attack(event)
+                # elif event["type"] == "applybuff" and event["ability"] == "Dark Transformation":
+                if event["type"] == "applybuff" and event["ability"] == "Dark Transformation":
+                    self._set_dark_transformation_first_attack(event)
+            
+            if self._dark_transformation_first_attack is not None:
+                if event["type"] == "damage":
+                    self.num_attacks += 1
+                    self.total_damage += event["amount"]
 
     def score(self):
         return ScoreWeight.calculate(
-            ScoreWeight(int(self.snapshotted_greatness), 2),
-            ScoreWeight(int(self.snapshotted_fc), 3),
+            # ScoreWeight(int(self.snapshotted_greatness), 2),
+            # ScoreWeight(int(self.snapshotted_fc), 3),
             # Lower weight since this only lasts 12s
-            ScoreWeight(self.hyperspeed_uptime, 2),
+            # ScoreWeight(self.hyperspeed_uptime, 2),
             ScoreWeight(self.berserking_uptime or 0, self.berserking_uptime or 0),
-            ScoreWeight(self.up_uptime, 4),
+            # ScoreWeight(self.up_uptime, 4),
             ScoreWeight(self.bl_uptime, 10 if self.bl_uptime else 0),
-            ScoreWeight(self.num_casts / max(1, self.num_melees + self.num_casts), 4),
-            ScoreWeight(
-                len([t for t in self.trinket_snapshots if t["did_snapshot"]])
-                / (len(self.trinket_snapshots) if self.trinket_snapshots else 1),
-                len(self.trinket_snapshots) * 2,
-            ),
+            # ScoreWeight(self.num_casts / max(1, self.num_melees + self.num_casts), 4),
+            # ScoreWeight(
+            #     len([t for t in self.trinket_snapshots if t["did_snapshot"]])
+            #     / (len(self.trinket_snapshots) if self.trinket_snapshots else 1),
+            #     len(self.trinket_snapshots) * 2,
+            # ),
             ScoreWeight(
                 sum([t["uptime"].uptime() for t in self.trinket_uptimes])
                 / (len(self.trinket_uptimes) if self.trinket_uptimes else 1),
                 len(self.trinket_uptimes) * 2,
             ),
-            ScoreWeight(
-                int(self.snapshotted_sigil)
-                if self.snapshotted_sigil is not None
-                else 0,
-                2 if self.snapshotted_sigil is not None else 0,
-            ),
-            ScoreWeight(
-                int(self.snapshotted_t9) if self.snapshotted_t9 is not None else 0,
-                2 if self.snapshotted_t9 is not None else 0,
-            ),
-            ScoreWeight(
-                int(self.snapshotted_bloodfury) if self.snapshotted_bloodfury is not None else 0,
-                2 if self.snapshotted_bloodfury is not None else 0,
-            ),
+            # ScoreWeight(
+            #     int(self.snapshotted_sigil)
+            #     if self.snapshotted_sigil is not None
+            #     else 0,
+            #     2 if self.snapshotted_sigil is not None else 0,
+            # ),
+            # ScoreWeight(
+            #     int(self.snapshotted_t9) if self.snapshotted_t9 is not None else 0,
+            #     2 if self.snapshotted_t9 is not None else 0,
+            # ),
+            # ScoreWeight(
+            #     int(self.snapshotted_bloodfury) if self.snapshotted_bloodfury is not None else 0,
+            #     2 if self.snapshotted_bloodfury is not None else 0,
+            # ),
         )
 
 
