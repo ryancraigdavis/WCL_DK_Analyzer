@@ -7,6 +7,7 @@ import UnholyRune from "./assets/unholy_rune.webp";
 import DeathRune from "./assets/death_rune.webp";
 import { ArmyAnalysis } from "./ArmyAnalysis.jsx"
 import { GargoyleAnalysis } from "./GargoyleAnalysis"
+import { DarkTransformationAnalysis } from "./DarkTransformationAnalysis"
 import { GhoulAnalysis } from "./GhoulAnalysis.jsx"
 import { formatCPM, formatIcon, formatTimestamp, formatUpTime, formatUsage, Tooltip } from "./helpers"
 
@@ -343,6 +344,10 @@ const Summary = () => {
 
   return (
     <div className={"analysis-summary"}>
+    {/*<div className="summary-data">
+          <h3>Summary Data</h3>
+          <pre>{JSON.stringify(summary, null, 2)}</pre>
+        </div>*/}
       <div className={"fight-summary"}>
         <h2>{fight.source}</h2>
         <div className={"summary-line"}>
@@ -396,6 +401,11 @@ const Summary = () => {
         {summary.ghoul && (
           <div className="analysis-section">
             <GhoulAnalysis ghoul={summary.ghoul} />
+          </div>
+        )}
+        {summary.dark_transformation && (
+          <div className="analysis-section">
+            <DarkTransformationAnalysis dark_transformation={summary.dark_transformation} />
           </div>
         )}
         {summary.gargoyle && (

@@ -25,6 +25,9 @@ class APTrinket(Trinket):
     def snapshots_gargoyle(self):
         return True
 
+    @property
+    def uptime_ghoul(self):
+        return True
     # @property
     # def snapshots_army_haste(self):
     #     return False

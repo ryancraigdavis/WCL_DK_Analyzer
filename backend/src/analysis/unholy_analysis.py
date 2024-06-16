@@ -114,7 +114,7 @@ class FrostFeverAnalyzer(DebuffUptimeAnalyzer):
         }
 
 
-class DarkTransformationAnalyzer(BuffUptimeAnalyzer):
+class DarkTransformationUptimeAnalyzer(BuffUptimeAnalyzer):
     INCLUDE_PET_EVENTS = True
 
     def __init__(self, duration, buff_tracker, ignore_windows, items):
@@ -345,7 +345,7 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
 
     def report(self):
         return {
-            "dark transformation": {
+            "dark_transformation": {
                 "score": self.score(),
                 "num_possible": self.possible_dark_transformations,
                 "num_actual": len(self.windows),
@@ -839,10 +839,12 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
     def get_analyzers(self, fight: Fight, buff_tracker, dead_zone_analyzer, items):
         dead_zones = dead_zone_analyzer.get_dead_zones()
         gargoyle = GargoyleAnalyzer(fight.duration, buff_tracker, dead_zones, items)
+        dark_transformation = DarkTransformationAnalyzer(fight.duration, buff_tracker, dead_zones, items)
 
         return super().get_analyzers(fight, buff_tracker, dead_zone_analyzer, items) + [
-            DarkTransformationAnalyzer(fight.duration, buff_tracker, dead_zones, items),
+            DarkTransformationUptimeAnalyzer(fight.duration, buff_tracker, dead_zones, items),
             gargoyle,
+            dark_transformation,
             BloodPlagueAnalyzer(fight.duration, dead_zones),
             FrostFeverAnalyzer(fight.duration, dead_zones),
             DeathAndDecayUptimeAnalyzer(fight.duration, dead_zones, items),

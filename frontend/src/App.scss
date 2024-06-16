@@ -220,6 +220,22 @@ tr:hover {
   margin-bottom: 5px;
 }
 
+.dark-transformation-window {
+  margin-top: 12px;
+
+  > div {
+    margin-bottom: 2px;
+  }
+}
+
+.dark-transformation-window:nth-child(even) {
+  margin-top: 20px;
+}
+
+.dark-transformation-subheader {
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
 .usage-analysis {
   white-space: pre;
 }
