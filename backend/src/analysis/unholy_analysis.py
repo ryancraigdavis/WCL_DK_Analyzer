@@ -248,6 +248,15 @@ class DarkTransformationWindow(Window):
         for uptime in self._uptimes:
             uptime.set_start_time(event["timestamp"])
 
+    def is_ghoul_damage_event(self, event):
+        if event["type"] in ["SPELL_DAMAGE", "SWING_DAMAGE"]:
+            if "Ghoul" in event["source"]:
+                if event["type"] == "SPELL_DAMAGE" and event["ability"] in ["Claw", "Sweeping Claws", "Gnaw"]:
+                    return True
+                elif event["type"] == "SWING_DAMAGE":
+                    return True
+        return False
+
     def add_event(self, event):
         for uptime in self._uptimes:
             uptime.add_event(event)
@@ -259,9 +268,10 @@ class DarkTransformationWindow(Window):
                 # elif event["type"] == "applybuff" and event["ability"] == "Dark Transformation":
                 if event["type"] == "applybuff" and event["ability"] == "Dark Transformation":
                     self._set_dark_transformation_first_attack(event)
+                    self.total_damage += event["amount"]
             
             if self._dark_transformation_first_attack is not None:
-                if event["type"] == "damage":
+                if self.is_ghoul_damage_event(event):
                     self.num_attacks += 1
                     self.total_damage += event["amount"]
 
