@@ -601,6 +601,10 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
         return bool(self._num_windows("Unholy Frenzy"))
 
     @property
+    def has_synapse_springs(self):
+        return bool(self._num_windows("Synapse Springs"))
+
+    @property
     def has_berserking(self):
         return bool(self._num_windows("Berserking"))
 

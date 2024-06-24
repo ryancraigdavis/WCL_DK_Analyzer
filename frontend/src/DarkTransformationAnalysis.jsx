@@ -32,6 +32,12 @@ export const DarkTransformationAnalysis = ({ dark_transformation }) => {
                   )
                 })}
                 <div>
+                  {formatUpTime(window.synapse_springs_uptime, "Synapse Springs")}
+                </div>
+                <div>
+                  {formatUpTime(window.unholy_frenzy_uptime, "Unholy Frenzy")}
+                </div>
+                <div>
                   {formatUpTime(window.bloodlust_uptime, "Bloodlust")}
                 </div>
                 {window.berserking_uptime !== null && (

@@ -149,6 +149,14 @@ class DarkTransformationWindow(Window):
         self._bl_uptime = BuffUptimeAnalyzer(
             self.end, buff_tracker, ignore_windows, {"Bloodlust", "Heroism", "Time Warp"}, self.start
         ) if buff_tracker.has_bl else None
+        self._synapse_springs_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Synapse Springs",
+            self.start,
+            max_duration=10000 - 25,
+        ) if buff_tracker.has_synapse_springs else None
         self._crushing_weight_uptime = BuffUptimeAnalyzer(
             self.end,
             buff_tracker,
@@ -185,6 +193,8 @@ class DarkTransformationWindow(Window):
         self._uptimes = []
         if self._berserking_uptime:
             self._uptimes.append(self._berserking_uptime)
+        if self._synapse_springs_uptime:
+            self._uptimes.append(self._synapse_springs_uptime)
         if self._bl_uptime:
             self._uptimes.append(self._bl_uptime)
         if self._unholy_frenzy_uptime:
@@ -226,6 +236,10 @@ class DarkTransformationWindow(Window):
     @property
     def unholy_frenzy_uptime(self):
         return self._unholy_frenzy_uptime.uptime() if self._unholy_frenzy_uptime else None
+
+    @property
+    def synapse_springs_uptime(self):
+        return self._synapse_springs_uptime.uptime() if self._synapse_springs_uptime else None
 
     @property
     def bl_uptime(self):
@@ -347,7 +361,8 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
                         "num_attacks": window.num_attacks,
                         # "num_melees": window.num_melees,
                         # "speed_uptime": window.speed_uptime,
-                        # "hyperspeed_uptime": window.hyperspeed_uptime,
+                        "synapse_springs_uptime": window.synapse_springs_uptime,
+                        "unholy_frenzy_uptime": window.unholy_frenzy_uptime,
                         "berserking_uptime": window.berserking_uptime,
                         "start": window.start,
                         "end": window.end,
