@@ -339,7 +339,7 @@ const Summary = () => {
     dps = "n/a"
   }
   const summary = data.analysis;
-  const isUnholy = data.spec === "Unholy"
+  const isUnholy = data.spec === "Frost"
   const showSpeed = data.show_speed
 
   return (
@@ -381,6 +381,9 @@ const Summary = () => {
           )
         }
         <div className="analysis-section">
+          <h3>Speed</h3>
+          {formatGCDLatency(summary.gcd_latency, isUnholy)}
+          {formatRuneDrift(summary.rune_drift, isUnholy)}
           <h3>Rotation</h3>
           {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
           {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}

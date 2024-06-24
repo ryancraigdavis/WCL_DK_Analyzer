@@ -788,7 +788,6 @@ class GCDAnalyzer(BaseAnalyzer):
         "Golem's Strength",
         "Empower Rune Weapon",
         "Cobalt Frag Bomb",
-        "Big Daddy",
         "Synapse Springs",
         "Blood Fury",
         "Berserking",
@@ -851,9 +850,9 @@ class GCDAnalyzer(BaseAnalyzer):
         for timestamp, last_timestamp in self._gcds:
             timestamp_diff = timestamp - last_timestamp
             assumed_gcd = (
-                1000
+                500
                 if self._buff_tracker.is_active("Unholy Presence", timestamp)
-                else 1500
+                else 1000
             )
 
             # don't handle spell GCD for now

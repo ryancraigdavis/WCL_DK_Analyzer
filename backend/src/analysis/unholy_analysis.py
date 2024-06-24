@@ -21,6 +21,7 @@ from analysis.core_analysis import (
     MeleeUptimeAnalyzer,
     TrinketAnalyzer,
     BuffUptimeAnalyzer,
+    GCDAnalyzer,
     T11UptimeAnalyzer,
     T12UptimeAnalyzer,
 )
@@ -769,6 +770,9 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "weight": 3,
                 "exponent_factor": exponent_factor,
             },
+            GCDAnalyzer: {
+                "weight": 3,
+            },
             DarkTransformationAnalyzer: {
                 "weight": 3,
                 "exponent_factor": exponent_factor,
@@ -805,10 +809,10 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "weight": lambda ta: ta.num_on_use_trinkets * 2,
             },
             T11UptimeAnalyzer: {
-                "weight": lambda t9a: t9a.score_weight(),
+                "weight": lambda t11a: t11a.score_weight(),
             },
             T12UptimeAnalyzer: {
-                "weight": lambda t9a: t9a.score_weight(),
+                "weight": lambda t12a: t12a.score_weight(),
             },
             BloodTapAnalyzer: {
                 "weight": 1,
