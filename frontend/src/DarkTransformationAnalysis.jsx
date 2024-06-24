@@ -20,7 +20,7 @@ export const DarkTransformationAnalysis = ({ dark_transformation }) => {
                 </div>
                 <div>
                   {Info}
-                  <span>Damage: {hl(window.damage.toLocaleString())} ({hl(numAttacks)} attacks</span>
+                  <span>Damage: {hl(window.damage.toLocaleString())} ({hl(numAttacks)} attacks)</span>
                 </div>
                 {window.trinket_uptimes.map((uptime, i) => {
                   const icon = formatIcon(uptime.name, uptime.icon)

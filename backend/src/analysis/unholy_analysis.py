@@ -248,39 +248,16 @@ class DarkTransformationWindow(Window):
         for uptime in self._uptimes:
             uptime.set_start_time(event["timestamp"])
 
-    def is_ghoul_damage_event(self, event):
-        if event["type"] in ["SPELL_DAMAGE", "SWING_DAMAGE"]:
-            if "Ghoul" in event["source"]:
-                if event["type"] == "SPELL_DAMAGE" and event["ability"] in ["Claw", "Sweeping Claws", "Gnaw"]:
-                    return True
-                elif event["type"] == "SWING_DAMAGE":
-                    return True
-        return False
-
     def add_event(self, event):
         for uptime in self._uptimes:
             uptime.add_event(event)
 
-        if event["source"] == "Ghoul":
-            if self._dark_transformation_first_attack is None:
-                # if event["type"] == "damage" and event["ability"] in ("Melee", "Claw", "Sweeping Claws", "Gnaw"):
-                #     self._set_dark_transformation_first_attack(event)
-                # elif event["type"] == "applybuff" and event["ability"] == "Dark Transformation":
-                if event["type"] == "applybuff" and event["ability"] == "Dark Transformation":
-                    self._set_dark_transformation_first_attack(event)
-                    self.total_damage += event["amount"]
-            
-            if self._dark_transformation_first_attack is not None:
-                if self.is_ghoul_damage_event(event):
-                    self.num_attacks += 1
-                    self.total_damage += event["amount"]
+        if "Ghoul" in event["source"] and event["type"] == "damage":
+            self.num_attacks += 1
+            self.total_damage += event["amount"]
 
     def score(self):
         return ScoreWeight.calculate(
-            # ScoreWeight(int(self.snapshotted_greatness), 2),
-            # ScoreWeight(int(self.snapshotted_fc), 3),
-            # Lower weight since this only lasts 12s
-            # ScoreWeight(self.hyperspeed_uptime, 2),
             ScoreWeight(self.berserking_uptime or 0, self.berserking_uptime or 0),
             # ScoreWeight(self.up_uptime, 4),
             ScoreWeight(self.bl_uptime, 10 if self.bl_uptime else 0),
@@ -295,20 +272,6 @@ class DarkTransformationWindow(Window):
                 / (len(self.trinket_uptimes) if self.trinket_uptimes else 1),
                 len(self.trinket_uptimes) * 2,
             ),
-            # ScoreWeight(
-            #     int(self.snapshotted_sigil)
-            #     if self.snapshotted_sigil is not None
-            #     else 0,
-            #     2 if self.snapshotted_sigil is not None else 0,
-            # ),
-            # ScoreWeight(
-            #     int(self.snapshotted_t9) if self.snapshotted_t9 is not None else 0,
-            #     2 if self.snapshotted_t9 is not None else 0,
-            # ),
-            # ScoreWeight(
-            #     int(self.snapshotted_bloodfury) if self.snapshotted_bloodfury is not None else 0,
-            #     2 if self.snapshotted_bloodfury is not None else 0,
-            # ),
         )
 
 
@@ -381,7 +344,7 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
                         # "sigil_name": self._items.sigil and self._items.sigil.name,
                         # "unholy_presence_uptime": window.up_uptime,
                         "bloodlust_uptime": window.bl_uptime,
-                        "num_casts": window.num_attacks,
+                        "num_attacks": window.num_attacks,
                         # "num_melees": window.num_melees,
                         # "speed_uptime": window.speed_uptime,
                         # "hyperspeed_uptime": window.hyperspeed_uptime,
