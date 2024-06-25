@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import List
 # import os
-# import json
+import json
 
 from analysis.base import (
     AnalysisScorer,

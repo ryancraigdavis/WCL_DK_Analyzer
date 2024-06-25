@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import Optional
+import json
 
 from analysis.base import (
     AnalysisScorer,
@@ -38,6 +39,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
         self._last_event = None
         self._last_timestamp = 0
         self._checker = {
+            "Atramedes": self._check_atramedes,
             "Loatheb": self._check_loatheb,
             "Thaddius": self._check_thaddius,
             "Maexxna": self._check_maexxna,
@@ -53,6 +55,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
         self._is_hard_mode = self._fight.is_hard_mode
 
     def _check_boss_events_occur(self, event):
+
         if event.get("source_is_boss") or (
             event.get("target_is_boss") and event["type"] == "cast"
         ):
@@ -122,6 +125,31 @@ class DeadZoneAnalyzer(BasePreprocessor):
         elif event["type"] == "removedebuff":
             dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
             self._dead_zones.append(dead_zone)
+
+    def _check_atramedes(self, event):
+        if event.get("target") != "Atramedes" and event.get("source") != "Atramedes":
+            return
+
+        current_time = event["timestamp"]
+
+        # Check if it's the first event
+        if self._last_timestamp == 0:
+            self._last_timestamp = current_time
+            return
+
+        phase_duration = 125000  # 125 seconds for a full cycle
+        current_phase_time = current_time % phase_duration
+
+        # Check for the air phase (85-125 seconds in each cycle)
+        if 85000 < current_phase_time <= 125000:
+            # If this is the start of an air phase, create a dead zone
+            if self._last_timestamp % phase_duration <= 85000:
+                dead_zone_start = (current_time // phase_duration) * phase_duration + 85000
+                dead_zone_end = dead_zone_start + 40000  # 40 seconds air phase
+                dead_zone = self.DeadZone(dead_zone_start, dead_zone_end)
+                self._dead_zones.append(dead_zone)
+
+        self._last_timestamp = current_time
 
     def _check_maexxna(self, event):
         if event["type"] not in ("removedebuff", "applydebuff"):
