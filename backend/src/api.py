@@ -2,6 +2,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from typing import Dict
+import json
 
 import sentry_sdk
 from fastapi import FastAPI, Response
@@ -66,6 +67,19 @@ async def analyze_fight(
         return {"error": "Bad response from Warcraft Logs, try again"}
 
     events = analyze(report, fight_id)
+    # for i in events:
+    #     print(i)
+    #     if i == "analysis":
+    #         print(events[i])
+    # with open('/home/ryan/Desktop/bosses.json', 'w') as f:
+    #     f.write('[\n')  # Start of JSON array
+    #     for i, event in enumerate(events["events"]):
+    #         json.dump(event, f, indent=4)
+    #         if i < len(events) - 1:
+    #             f.write(',\n')  # Add comma between objects, but not after the last one
+    #         else:
+    #             f.write('\n')
+    #     f.write(']')
 
     # don't cache reports that are less than a day old
     ended_ago = datetime.now() - datetime.fromtimestamp(report.end_time / 1000)

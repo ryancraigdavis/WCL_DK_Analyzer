@@ -7,6 +7,7 @@ from analysis.core_analysis import (
 from analysis.frost_analysis import (
     FrostAnalysisConfig,
 )
+import json
 from analysis.items import ItemPreprocessor, TrinketPreprocessor
 from analysis.unholy_analysis import UnholyAnalysisConfig
 from console_table import EventsTable, SHOULD_PRINT
@@ -49,6 +50,16 @@ class Analyzer:
         return None
 
     def _preprocess_events(self):
+        # boss_events = self._fight.events
+        # with open('/home/ryan/Desktop/bosses.json', 'w') as f:
+        #     f.write('[\n')  # Start of JSON array
+        #     for i, event in enumerate(boss_events):
+        #         json.dump(event, f, indent=4)
+        #         if i < len(boss_events) - 1:
+        #             f.write(',\n')  # Add comma between objects, but not after the last one
+        #         else:
+        #             f.write('\n')
+        #     f.write(']')
         dead_zone_analyzer = self._get_dead_zone_analyzer()
         buff_tracker = self._get_buff_tracker()
         source_id = self._fight.source.id
