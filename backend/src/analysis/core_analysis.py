@@ -41,6 +41,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
         self._checker = {
             "Ascendant Council": self._check_ascendant_council,
             "Atramedes": self._check_atramedes,
+            "Al'Akir": self._check_al_akir,
             "Loatheb": self._check_loatheb,
             "Thaddius": self._check_thaddius,
             "Maexxna": self._check_maexxna,
@@ -77,7 +78,6 @@ class DeadZoneAnalyzer(BasePreprocessor):
             and event["hitPoints"] / event["maxHitPoints"] <= 0.25
         ):
             self._last_event = event
-            # print(self._last_event["timestamp"])
         if (
             (
                 event.get("source") == "Elementium Monstrosity"
@@ -85,6 +85,25 @@ class DeadZoneAnalyzer(BasePreprocessor):
             )
             and self._last_event
             and not self._dead_zones
+        ):
+            dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            self._dead_zones.append(dead_zone)
+
+    def _check_al_akir(self, event):
+        if event.get("target") != "Al'Akir":
+            return
+        if (
+            not self._last_event
+            and event["type"] == "damage"
+            and event["target"] == "Al'Akir"
+            and "hitPoints" in event
+            and event["hitPoints"] / event["maxHitPoints"] <= 0.25
+        ):
+            self._last_event = event
+        if (
+            self._last_event
+            and not self._dead_zones
+            and event["timestamp"] - self._last_event["timestamp"] > 5000
         ):
             dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
             self._dead_zones.append(dead_zone)
@@ -111,6 +130,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
         ):
             dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
             self._dead_zones.append(dead_zone)
+
 
     def _check_algalon(self, event):
         if event["type"] not in ("applydebuff", "removedebuff"):

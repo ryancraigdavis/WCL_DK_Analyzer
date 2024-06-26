@@ -53,7 +53,10 @@ class Analyzer:
         # boss_events = self._fight.events
         # with open('/home/ryan/Desktop/bosses.json', 'w') as f:
         #     f.write('[\n')  # Start of JSON array
+        #     # for i, event in enumerate(boss_events):
         #     for i, event in enumerate(boss_events):
+        #         if i > 50:
+        #             break
         #         json.dump(event, f, indent=4)
         #         if i < len(boss_events) - 1:
         #             f.write(',\n')  # Add comma between objects, but not after the last one
