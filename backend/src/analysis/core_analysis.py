@@ -64,6 +64,55 @@ class DeadZoneAnalyzer(BasePreprocessor):
                 self._dead_zones.append(dead_zone)
             self._last_timestamp = event["timestamp"]
 
+    def _check_ascendant_council(self, event):
+        if event.get("target") not in ("Ignacious", "Arion", "Terrastra", "Feludius", "Elementium Monstrosity"):
+            return
+
+        if (
+            not self._last_event
+            and event["type"] == "damage"
+            and event["target"] in ("Arion", "Terrastra")
+            and "hitPoints" in event
+            and event["hitPoints"] / event["maxHitPoints"] <= 0.05
+        ):
+            self._last_event = event
+        if (
+            (
+                event.get("source") == "Saronite Animus"
+                or event.get("target") == "Saronite Animus"
+            )
+            and self._last_event
+            and not self._dead_zones
+        ):
+            dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            self._dead_zones.append(dead_zone)
+
+    # def _check_1_atramedes(self, event):
+    #     if event.get("target") != "Atramedes" and event.get("source") != "Atramedes":
+    #         return
+
+    #     current_time = event["timestamp"]
+
+    #     # Check if it's the first event
+    #     if self._last_timestamp == 0:
+    #         self._last_timestamp = current_time
+    #         return
+
+    #     phase_duration = 125000  # 125 seconds for a full cycle
+    #     current_phase_time = current_time % phase_duration
+
+    #     # Check for the air phase (85-125 seconds in each cycle)
+    #     if 85000 < current_phase_time <= 125000:
+    #         # If this is the start of an air phase, create a dead zone
+    #         if self._last_timestamp % phase_duration <= 85000:
+    #             dead_zone_start = (current_time // phase_duration) * phase_duration + 85000
+    #             dead_zone_end = dead_zone_start + 40000  # 40 seconds air phase
+    #             dead_zone = self.DeadZone(dead_zone_start, dead_zone_end)
+    #             self._dead_zones.append(dead_zone)
+
+    #     self._last_timestamp = current_time
+
+
     def _check_vezax(self, event):
         if not self._is_hard_mode:
             return
