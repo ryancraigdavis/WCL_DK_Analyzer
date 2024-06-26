@@ -42,6 +42,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
             "Ascendant Council": self._check_ascendant_council,
             "Atramedes": self._check_atramedes,
             "Al'Akir": self._check_al_akir,
+            "Nefarion Dominion": self._check_nefarion_mind_control,
             "Loatheb": self._check_loatheb,
             "Thaddius": self._check_thaddius,
             "Maexxna": self._check_maexxna,
@@ -49,7 +50,6 @@ class DeadZoneAnalyzer(BasePreprocessor):
             "Ignis the Furnace Master": self._check_ignis,
             "Razorscale": self._check_razorscale,
             "Algalon the Observer": self._check_algalon,
-            "General Vezax": self._check_vezax,
             "The Northrend Beasts": self._check_boss_events_occur,
             "Anub'arak": self._check_boss_events_occur,
         }.get(self._fight.encounter.name)
@@ -108,29 +108,24 @@ class DeadZoneAnalyzer(BasePreprocessor):
             dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
             self._dead_zones.append(dead_zone)
 
-    def _check_vezax(self, event):
-        if not self._is_hard_mode:
+    def _check_nefarion_mind_control(self, event):
+        print(event["target"])
+        if event.get("target") not in ("Onyxia", "Nefarian"):
             return
+        print(event["type"])
+        if event["type"] not in ("applydebuff", "removedebuff"):
+            return
+        print(event["ability"])
 
-        if (
-            not self._last_event
-            and event["type"] == "damage"
-            and event["target"] == "General Vezax"
-            and "hitPoints" in event
-            and event["hitPoints"] / event["maxHitPoints"] <= 0.05
-        ):
-            self._last_event = event
-        if (
-            (
-                event.get("source") == "Saronite Animus"
-                or event.get("target") == "Saronite Animus"
-            )
-            and self._last_event
-            and not self._dead_zones
-        ):
-            dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
-            self._dead_zones.append(dead_zone)
+        # if event["ability"] != "Dominion":
+        #     return
 
+        # if event["type"] == "applydebuff":
+        #     self._last_event = event
+        # elif event["type"] == "removedebuff":
+        #     dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
+        #     print(self._last_event["timestamp"], event["timestamp"])
+        #     self._dead_zones.append(dead_zone)
 
     def _check_algalon(self, event):
         if event["type"] not in ("applydebuff", "removedebuff"):

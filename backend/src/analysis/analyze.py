@@ -51,6 +51,7 @@ class Analyzer:
 
     def _preprocess_events(self):
         # boss_events = self._fight.events
+        # print(self._fight.events)
         # with open('/home/ryan/Desktop/bosses.json', 'w') as f:
         #     f.write('[\n')  # Start of JSON array
         #     # for i, event in enumerate(boss_events):
@@ -219,11 +220,8 @@ class Analyzer:
                     event["type"] in ("removedebuff", "applydebuff", "refreshdebuff")
                     and event["ability"]
                     in (
-                        "Fungal Creep",
-                        "Web Spray",
-                        "Frost Blast",
-                        "Slag Pot",
-                        "Black Hole",
+                        "Dominion",
+                        "Magma",
                     )
                 )
             ):
