@@ -733,13 +733,15 @@ class SnapshottableBuff:
 class BloodTapAnalyzer(BaseAnalyzer):
     def __init__(self, fight_end_time):
         self._num_used = 0
+        self._max_blood_tap_cooldown = 60000
         self._fight_end_time = fight_end_time
 
     @property
     def max_usages(self):
-        return max(1 + (self._fight_end_time - 10000) // 30000, self._num_used)
+        return max(1 + (self._fight_end_time - 10000) // self._max_blood_tap_cooldown, self._num_used)
 
     def add_event(self, event):
+        self._max_blood_tap_cooldown = event["blood_tap_cooldown"]
         if event["type"] == "cast" and event["ability"] == "Blood Tap":
             self._num_used += 1
 

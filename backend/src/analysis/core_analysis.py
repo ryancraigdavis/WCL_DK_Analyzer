@@ -1015,6 +1015,37 @@ class DiseaseAnalyzer(BaseAnalyzer):
             }
         }
 
+class TalentPreprocessor(BasePreprocessor):
+
+    def __init__(self, combatant_info):
+        self._combatant_info = combatant_info
+        self._blood_tap_cooldown = 60000
+        self._disease_duration = 21000
+
+    def preprocess_event(self, event):
+        self.blood_tap_cooldown()
+        self.disease_duration()
+
+    def blood_tap_cooldown(self):
+        _talents = self._combatant_info.get("talents")
+        if _talents[0]["id"] == 6:
+            self._blood_tap_cooldown = 45000
+        elif _talents[0]["id"] == 7:
+            self._blood_tap_cooldown = 30000
+        else:
+            self._blood_tap_cooldown = 60000
+
+    def disease_duration(self):
+        # Need to add calc for masterfrost eventually
+        # and add link for frost
+        _talents = self._combatant_info.get("talents")
+        if _talents[2]["id"] >= 11:
+            self._disease_duration = 33000
+
+    def decorate_event(self, event):
+        event["blood_tap_cooldown"] = self._blood_tap_cooldown
+        event["disease_duration"] = self._disease_duration
+
 
 class BombAnalyzer(BaseAnalyzer):
     def __init__(self, fight_duration):
