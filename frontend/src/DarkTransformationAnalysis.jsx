@@ -22,27 +22,43 @@ export const DarkTransformationAnalysis = ({ dark_transformation }) => {
                   {Info}
                   <span>Damage: {hl(window.damage.toLocaleString())} ({hl(numAttacks)} attacks)</span>
                 </div>
-                {window.trinket_uptimes.map((uptime, i) => {
-                  const icon = formatIcon(uptime.name, uptime.icon)
-
-                  return (
-                    <div key={i}>
-                      {formatUpTime(uptime.uptime, <>{icon} {uptime.name}</>)}
-                    </div>
-                  )
-                })}
+                {window.trinket_uptimes
+                  .filter(uptime => uptime.uptime !== 0)
+                  .map((uptime, i) => {
+                    const icon = formatIcon(uptime.name, uptime.icon)
+                    return (
+                      <div key={i}>
+                        {formatUpTime(uptime.uptime, <>{icon} {uptime.name}</>)}
+                      </div>
+                    )
+                  })
+                }
                 <div>
-                  {formatUpTime(window.synapse_springs_uptime, "Synapse Springs")}
+                  {formatUpTime(window.fallen_crusader_uptime, "Unholy Strength")}
                 </div>
-                <div>
-                  {formatUpTime(window.unholy_frenzy_uptime, "Unholy Frenzy")}
-                </div>
-                <div>
-                  {formatUpTime(window.bloodlust_uptime, "Bloodlust")}
-                </div>
-                {window.berserking_uptime !== null && (
+                {window.synapse_springs_uptime !== 0 && (
+                  <div>
+                    {formatUpTime(window.synapse_springs_uptime, "Synapse Springs")}
+                  </div>
+                )}
+                {window.unholy_frenzy_uptime !== 0 && (
+                  <div>
+                    {formatUpTime(window.unholy_frenzy_uptime, "Unholy Frenzy")}
+                  </div>
+                )}
+                {window.bloodlust_uptime !== 0 && (
+                  <div>
+                    {formatUpTime(window.bloodlust_uptime, "Bloodlust")}
+                  </div>
+                )}
+                {window.berserking_uptime !== null && window.berserking_uptime !== 0 && (
                   <div>
                     {formatUpTime(window.berserking_uptime, "Berserking")}
+                  </div>
+                )}
+                {window.bloodfury_uptime !== null && window.bloodfury_uptime !== 0 && (
+                  <div>
+                    {formatUpTime(window.bloodfury_uptime, "Blood Fury")}
                   </div>
                 )}
               </div>

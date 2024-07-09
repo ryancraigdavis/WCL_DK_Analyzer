@@ -677,6 +677,10 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
         return bool(self._num_windows("Berserking"))
 
     @property
+    def has_fallen_crusader(self):
+        return bool(self._num_windows("Unholy Strength"))
+
+    @property
     def has_bloodfury(self):
         return bool(self._num_windows("Blood Fury"))
 

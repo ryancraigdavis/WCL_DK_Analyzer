@@ -190,10 +190,29 @@ class DarkTransformationWindow(Window):
             self.start,
             max_duration=10000 - 25,
         ) if buff_tracker.has_berserking else None
+        self._bloodfury_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Blood Fury",
+            self.start,
+            max_duration=15000 - 25,
+        ) if buff_tracker.has_bloodfury else None
+        self._fallen_crusader_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Unholy Strength",
+            self.start,
+            max_duration=15000 - 25,
+        ) if buff_tracker.has_fallen_crusader else None
+
 
         self._uptimes = []
         if self._berserking_uptime:
             self._uptimes.append(self._berserking_uptime)
+        if self._bloodfury_uptime:
+            self._uptimes.append(self._bloodfury_uptime)
         if self._synapse_springs_uptime:
             self._uptimes.append(self._synapse_springs_uptime)
         if self._bl_uptime:
@@ -204,6 +223,8 @@ class DarkTransformationWindow(Window):
             self._uptimes.append(self._crushing_weight_uptime)
         if self._shrine_purifying_uptime:
             self._uptimes.append(self._shrine_purifying_uptime)
+        if self._fallen_crusader_uptime:
+            self._uptimes.append(self._fallen_crusader_uptime)
 
         self.num_attacks = 0
         self.total_damage = 0
@@ -257,6 +278,14 @@ class DarkTransformationWindow(Window):
     @property
     def berserking_uptime(self):
         return self._berserking_uptime.uptime() if self._berserking_uptime else None
+
+    @property
+    def bloodfury_uptime(self):
+        return self._bloodfury_uptime.uptime() if self._bloodfury_uptime else None
+
+    @property
+    def fallen_crusader_uptime(self):
+        return self._fallen_crusader_uptime.uptime() if self._fallen_crusader_uptime else None
 
     def _set_dark_transformation_first_attack(self, event):
         self._dark_transformation_first_attack = event["timestamp"]
@@ -351,13 +380,11 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
                     {
                         "score": window.score(),
                         "damage": window.total_damage,
-                        # "snapshotted_greatness": window.snapshotted_greatness,
                         # "snapshotted_fc": window.snapshotted_fc,
                         # "snapshotted_sigil": window.snapshotted_sigil,
                         # "snapshotted_t9": window.snapshotted_t9,
                         # "snapshotted_bloodfury": window.snapshotted_bloodfury,
                         # "sigil_name": self._items.sigil and self._items.sigil.name,
-                        # "unholy_presence_uptime": window.up_uptime,
                         "bloodlust_uptime": window.bl_uptime,
                         "num_attacks": window.num_attacks,
                         # "num_melees": window.num_melees,
@@ -365,16 +392,10 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
                         "synapse_springs_uptime": window.synapse_springs_uptime,
                         "unholy_frenzy_uptime": window.unholy_frenzy_uptime,
                         "berserking_uptime": window.berserking_uptime,
+                        "bloodfury_uptime": window.bloodfury_uptime,
+                        "fallen_crusader_uptime": window.fallen_crusader_uptime,
                         "start": window.start,
                         "end": window.end,
-                        # "trinket_snapshots": [
-                        #     {
-                        #         "name": t["trinket"].name,
-                        #         "did_snapshot": t["did_snapshot"],
-                        #         "icon": t["trinket"].icon,
-                        #     }
-                        #     for t in window.trinket_snapshots
-                        # ],
                         "trinket_uptimes": [
                             {
                                 "name": t["trinket"].name,
