@@ -667,12 +667,12 @@ class GhoulAnalyzer(BaseAnalyzer):
             self._window = Window(0)
             self._windows.append(self._window)
 
-        if event["source"] == "Ghoul":
-            if event["type"] == "cast" and event["ability"] == "Claw":
+        if "Ghoul" in event["source"] and event["type"] == "damage":
+            if event["ability"] == "Claw":
                 self._num_claws += 1
-            elif event["type"] == "cast" and event["ability"] == "Sweeping Claws":
+            elif event["ability"] == "Sweeping Claws":
                 self._num_sweeping_claws += 1
-            elif event["type"] == "cast" and event["ability"] == "Gnaw":
+            elif event["ability"] == "Gnaw":
                 self._num_gnaws += 1
             elif event["type"] == "damage":
                 self.total_damage += event["amount"]
