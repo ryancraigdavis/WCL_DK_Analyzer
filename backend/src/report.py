@@ -194,8 +194,10 @@ class Report:
                 return "Mighty Strength"
             if ability_id == 48470:
                 return "Gift of the Wild"
-            if ability_id == 80723:
+            if ability_id == 79472:
                 return "Flask of Titanic Strength"
+            if ability_id == 92679:
+                return "Flask of Battle"
             if ability_id == 20217:
                 return "Blessing of Kings"
             if ability_id == 87545:
@@ -231,15 +233,15 @@ class Report:
                     f'https://wow.zamimg.com/images/wow/icons/large/{ability["icon"]}'
                 )
         else:
-            if ability_id == 53748:
+            if ability_id == 79634:
                 return (
-                    "https://wow.zamimg.com/images/wow/icons/large/inv_potion_165.jpg"
+                    "https://wow.zamimg.com/images/wow/icons/large/inv_potiond_1.jpg"
                 )
             if ability_id == 48470:
                 return "https://wow.zamimg.com/images/wow/icons/large/spell_nature_giftofthewild.jpg"
-            if ability_id == 53760:
-                return "https://wow.zamimg.com/images/wow/icons/large/inv_alchemy_endlessflask_06.jpg"
-            if ability_id == 53758:
+            if ability_id == 79472:
+                return "https://wow.zamimg.com/images/wow/icons/large/inv_potione_6.jpg"
+            if ability_id == 92679:
                 return "https://wow.zamimg.com/images/wow/icons/large/inv_alchemy_endlessflask_05.jpg"
             if ability_id == 25898:
                 return "https://wow.zamimg.com/images/wow/icons/large/spell_magic_greaterblessingofkings.jpg"

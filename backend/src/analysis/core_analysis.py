@@ -636,6 +636,7 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
         return self._buff_windows[buff_name].num_windows
 
     def get_windows(self, buff_name):
+        print(buff_name)
         if buff_name not in self._buff_windows:
             return []
 
@@ -646,7 +647,7 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
 
     @property
     def has_flask(self):
-        return bool(self._num_windows("Flask of Titanic Strength"))
+        return bool(self._num_windows("Flask of Titanic Strength")) or bool(self._num_windows("Flask of Battle"))
 
     @property
     def num_pots(self):
@@ -741,8 +742,10 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
         if self._spec == "Frost":
             total_pots = max(2, self.num_pots)
             pot_score = self.num_pots / total_pots * 0.5
-            flask_score = 0.5 if self.has_flask else 0
-            return pot_score + flask_score
+            # potentially need to fix flasks
+            # flask_score = 0.5 if self.has_flask else 0
+            return pot_score
+            # return pot_score + flask_score
         return int(self.has_flask)
 
     def report(self):
