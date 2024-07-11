@@ -925,9 +925,9 @@ class GCDAnalyzer(BaseAnalyzer):
         for timestamp, last_timestamp in self._gcds:
             timestamp_diff = timestamp - last_timestamp
             assumed_gcd = (
-                500
+                1000
                 if self._buff_tracker.is_active("Unholy Presence", timestamp)
-                else 1000
+                else 1500
             )
 
             # don't handle spell GCD for now
