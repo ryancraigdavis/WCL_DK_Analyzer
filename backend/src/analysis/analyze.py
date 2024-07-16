@@ -141,6 +141,8 @@ class Analyzer:
                     "Smoldering Rune",  # T12 2pc
                     "Runic Corruption",
                     "Unholy Frenzy",
+                    "Flask of Titanic Strength",
+                    "Flask of Battle",
                     "Blood Presence",
                     "Unholy Presence",
                     "Frost Presence",

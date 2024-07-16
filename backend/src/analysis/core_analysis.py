@@ -753,6 +753,10 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
             "flask_usage": {
                 "has_flask": self.has_flask,
             },
+            "potions_used": self.num_pots,
+        }
+        ret["potion_usage"] = {
+                "potions_used": self.num_pots,
         }
         return ret
 

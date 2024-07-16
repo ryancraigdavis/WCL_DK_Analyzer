@@ -62,7 +62,7 @@ const formatRanking = (ranking) => {
 const Summary = () => {
   const analysis = useContext(LogAnalysisContext);
 
-  const formatGCDLatency = useCallback((gcdLatency, infoOnly) => {
+  {/*const formatGCDLatency = useCallback((gcdLatency, infoOnly) => {
     const averageLatency = gcdLatency.average_latency;
 
     let color = "green";
@@ -83,7 +83,7 @@ const Summary = () => {
       </div>
     );
   }, []);
-
+*/}
   const formatDiseases = useCallback((diseasesDropped) => {
     const numDiseasesDropped = diseasesDropped.num_diseases_dropped;
 
@@ -107,7 +107,7 @@ const Summary = () => {
     }
   }, []);
 
-  {/*const formatFlask = useCallback((flaskUsage) => {
+  const formatFlask = useCallback((flaskUsage) => {
     const hasFlask = flaskUsage.has_flask;
 
     if (hasFlask) {
@@ -125,8 +125,7 @@ const Summary = () => {
       </div>
     );
   }, []);
-*/}
-  const formatRuneDrift = useCallback((runeDrift, infoOnly) => {
+  {/*const formatRuneDrift = useCallback((runeDrift, infoOnly) => {
     const runeDriftMs = runeDrift.rune_drift_ms;
 
     let color = "green";
@@ -150,6 +149,7 @@ const Summary = () => {
     );
   }, []);
 
+*/}
   const formatKillingMachine = useCallback((killingMachine) => {
     const averageLatency = killingMachine.avg_latency;
     const averageLatencySeconds = averageLatency / 1000;
@@ -206,14 +206,14 @@ const Summary = () => {
       return (
         <div className={"potions"}>
           <i className="fa fa-check green" aria-hidden="true"></i>
-          You used <span className={"hl"}>{potionsUsed} of {total}</span> Potions (Speed or Indestructible)
+          You used <span className={"hl"}>{potionsUsed} of {total}</span> Potions (Golem's Blood)
         </div>
       );
     }
     return (
       <div className={"potions"}>
         <i className="fa fa-times red" aria-hidden="true"></i>
-        You used <span className={"hl"}>{potionsUsed} of 2</span> Potions (Speed or Indestructible)
+        You used <span className={"hl"}>{potionsUsed} of 2</span> Potions (Golem's Blood)
       </div>
     );
   }, []);
@@ -339,15 +339,15 @@ const Summary = () => {
     dps = "n/a"
   }
   const summary = data.analysis;
-  const isUnholy = data.spec === "Frost"
+  {/*  const isUnholy = data.spec === "Frost"*/}
   const showSpeed = data.show_speed
 
   return (
     <div className={"analysis-summary"}>
-    {/*<div className="summary-data">
+    <div className="summary-data">
           <h3>Summary Data</h3>
           <pre>{JSON.stringify(summary, null, 2)}</pre>
-        </div>*/}
+        </div>
       <div className={"fight-summary"}>
         <h2>{fight.source}</h2>
         <div className={"summary-line"}>
@@ -374,17 +374,18 @@ const Summary = () => {
           showSpeed && (
             <div className="analysis-section fight-analysis">
               <h3>Speed</h3>
-              {formatGCDLatency(summary.gcd_latency, isUnholy)}
-              {formatRuneDrift(summary.rune_drift, isUnholy)}
+            {/*{formatGCDLatency(summary.gcd_latency, isUnholy)}
+              {formatRuneDrift(summary.rune_drift, isUnholy)}*/}
               {summary.killing_machine && formatKillingMachine(summary.killing_machine)}
             </div>
           )
         }
         <div className="analysis-section">
+{/*
           <h3>Speed</h3>
           {formatGCDLatency(summary.gcd_latency, isUnholy)}
           {formatRuneDrift(summary.rune_drift, isUnholy)}
-          <h3>Rotation</h3>
+          <h3>Rotation</h3>*/}
           {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
           {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
           {summary.dark_transformation_uptime !== undefined && formatUpTime(summary.dark_transformation_uptime, "Dark Transformation", false, summary.dark_transformation_max_uptime)}
@@ -448,7 +449,7 @@ const Summary = () => {
             summary.bomb_usage.saronite_possible,
             "Saronite Bomb",
           )}
-    {/*{summary.flask_usage && formatFlask(summary.flask_usage)}*/}
+    {summary.flask_usage && formatFlask(summary.flask_usage)}
         </div>
       </div>
     </div>
@@ -631,7 +632,7 @@ export const Analysis = () => {
   const events = data.events;
   const summary = data.analysis;
 
-  const runeWarning = () => {
+  {/*  const runeWarning = () => {
     const warning = <i className={"fa fa-warning yellow"} />;
     if (summary.has_rune_spend_error) {
       return (
@@ -639,7 +640,7 @@ export const Analysis = () => {
       );
     }
     return <span>{warning} Runes shown are a best-effort approximation</span>;
-  };
+  };*/}
 
   return (
     <>
@@ -647,7 +648,7 @@ export const Analysis = () => {
         <i className="fa fa-external-link" aria-hidden="true" />
       </a>
       <Summary />
-      {runeWarning()}
+    {/*{runeWarning()}*/}
       <div className={"events-table"}>
         <table>
           <thead>
