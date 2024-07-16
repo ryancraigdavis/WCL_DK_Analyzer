@@ -724,6 +724,28 @@ class GhoulAnalyzer(BaseAnalyzer):
                 "damage": self.total_damage,
             }
         }
+class ArmyAnalyzer(BaseAnalyzer):
+    INCLUDE_PET_EVENTS = True
+
+    def __init__(self):
+        self.total_damage = 0
+
+    def add_event(self, event):
+        if event["type"] == "damage" and event["source"] == "Army of the Dead":
+            self.total_damage += event["amount"]
+
+    def report(self):
+        return {
+            "army": {
+                "damage": self.total_damage,
+            }
+        }
+
+    def score(self):
+        if self.total_damage >= 100000:
+            return 1
+        else:
+            return self.total_damage/100000
 
 
 class UnholyPresenceUptimeAnalyzer(BaseAnalyzer):
@@ -804,9 +826,6 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "weight": 3,
                 "exponent_factor": exponent_factor,
             },
-            GCDAnalyzer: {
-                "weight": 3,
-            },
             DarkTransformationAnalyzer: {
                 "weight": 3,
                 "exponent_factor": exponent_factor,
@@ -878,6 +897,7 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             UnholyPresenceUptimeAnalyzer(
                 fight.duration, buff_tracker, dead_zones
             ),
+            ArmyAnalyzer(),
             BloodTapAnalyzer(fight.end_time),
         ]
 
