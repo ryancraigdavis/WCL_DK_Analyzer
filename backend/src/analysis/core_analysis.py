@@ -662,6 +662,10 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
         return bool(self._num_windows("Race Against Death"))
 
     @property
+    def has_potion(self):
+        return bool(self._num_windows("Golem's Strength"))
+
+    @property
     def has_fatality(self):
         return bool(self._num_windows("Fatality"))
 

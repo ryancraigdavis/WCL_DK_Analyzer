@@ -166,6 +166,14 @@ class DarkTransformationWindow(Window):
             self.start,
             max_duration=15000 - 25,
         ) if buff_tracker.has_crushing_weight else None
+        self._potion_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Golem's Strength",
+            self.start,
+            max_duration=25000 - 25,
+        ) if buff_tracker.has_potion else None
         self._shrine_purifying_uptime = BuffUptimeAnalyzer(
             self.end,
             buff_tracker,
@@ -215,6 +223,8 @@ class DarkTransformationWindow(Window):
             self._uptimes.append(self._bloodfury_uptime)
         if self._synapse_springs_uptime:
             self._uptimes.append(self._synapse_springs_uptime)
+        if self._potion_uptime:
+            self._uptimes.append(self._potion_uptime)
         if self._bl_uptime:
             self._uptimes.append(self._bl_uptime)
         if self._unholy_frenzy_uptime:
@@ -262,6 +272,10 @@ class DarkTransformationWindow(Window):
     @property
     def synapse_springs_uptime(self):
         return self._synapse_springs_uptime.uptime() if self._synapse_springs_uptime else None
+
+    @property
+    def potion_uptime(self):
+        return self._potion_uptime.uptime() if self._potion_uptime else None
 
     @property
     def bl_uptime(self):
@@ -380,16 +394,10 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
                     {
                         "score": window.score(),
                         "damage": window.total_damage,
-                        # "snapshotted_fc": window.snapshotted_fc,
-                        # "snapshotted_sigil": window.snapshotted_sigil,
-                        # "snapshotted_t9": window.snapshotted_t9,
-                        # "snapshotted_bloodfury": window.snapshotted_bloodfury,
-                        # "sigil_name": self._items.sigil and self._items.sigil.name,
                         "bloodlust_uptime": window.bl_uptime,
                         "num_attacks": window.num_attacks,
-                        # "num_melees": window.num_melees,
-                        # "speed_uptime": window.speed_uptime,
                         "synapse_springs_uptime": window.synapse_springs_uptime,
+                        "potion_uptime": window.potion_uptime,
                         "unholy_frenzy_uptime": window.unholy_frenzy_uptime,
                         "berserking_uptime": window.berserking_uptime,
                         "bloodfury_uptime": window.bloodfury_uptime,
@@ -425,6 +433,7 @@ class GargoyleWindow(Window):
         self._gargoyle_first_cast = None
         self.snapshotted_synapse = buff_tracker.is_active("Synapse Springs", start)
         self.snapshotted_fc = buff_tracker.is_active("Unholy Strength", start)
+        self.snapshotted_potion = buff_tracker.is_active("Golem's Strength", start)
         self.snapshotted_t11 = (
             buff_tracker.is_active("Death Eater", start) if items.has_t11_4p() else None
         )
@@ -478,6 +487,7 @@ class GargoyleWindow(Window):
         return ScoreWeight.calculate(
             ScoreWeight(int(self.snapshotted_synapse), 2),
             ScoreWeight(int(self.snapshotted_fc), 3),
+            ScoreWeight(int(self.snapshotted_potion), 3),
             # Lower weight since this only lasts 12s
             ScoreWeight(self.num_casts / 18, 4),
             ScoreWeight(
@@ -552,6 +562,7 @@ class GargoyleAnalyzer(BaseAnalyzer):
                         "score": window.score(),
                         "damage": window.total_damage,
                         "snapshotted_synapse": window.snapshotted_synapse,
+                        "snapshotted_potion": window.snapshotted_potion,
                         "snapshotted_fc": window.snapshotted_fc,
                         "snapshotted_t11": window.snapshotted_t11,
                         "snapshotted_bloodfury": window.snapshotted_bloodfury,

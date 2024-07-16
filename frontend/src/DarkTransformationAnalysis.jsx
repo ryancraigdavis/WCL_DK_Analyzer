@@ -41,6 +41,11 @@ export const DarkTransformationAnalysis = ({ dark_transformation }) => {
                     {formatUpTime(window.synapse_springs_uptime, "Synapse Springs")}
                   </div>
                 )}
+                {window.potion_uptime !== 0 && (
+                  <div>
+                    {formatUpTime(window.potion_uptime, "Golem's Strength (Potion)")}
+                  </div>
+                )}
                 {window.unholy_frenzy_uptime !== 0 && (
                   <div>
                     {formatUpTime(window.unholy_frenzy_uptime, "Unholy Frenzy")}
