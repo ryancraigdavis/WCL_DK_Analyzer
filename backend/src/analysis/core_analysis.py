@@ -636,7 +636,6 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
         return self._buff_windows[buff_name].num_windows
 
     def get_windows(self, buff_name):
-        print(buff_name)
         if buff_name not in self._buff_windows:
             return []
 

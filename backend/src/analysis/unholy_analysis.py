@@ -315,22 +315,21 @@ class DarkTransformationWindow(Window):
             self.total_damage += event["amount"]
 
     def score(self):
-        return ScoreWeight.calculate(
+        dark_transformation_score = ScoreWeight.calculate(
             ScoreWeight(self.berserking_uptime or 0, self.berserking_uptime or 0),
-            # ScoreWeight(self.up_uptime, 4),
-            ScoreWeight(self.bl_uptime, 10 if self.bl_uptime else 0),
-            # ScoreWeight(self.num_casts / max(1, self.num_melees + self.num_casts), 4),
-            # ScoreWeight(
-            #     len([t for t in self.trinket_snapshots if t["did_snapshot"]])
-            #     / (len(self.trinket_snapshots) if self.trinket_snapshots else 1),
-            #     len(self.trinket_snapshots) * 2,
-            # ),
+            ScoreWeight(self.bloodfury_uptime or 0, self.bloodfury_uptime or 0),
+            ScoreWeight(self.potion_uptime or 0, 3 if self.potion_uptime else 0),
+            ScoreWeight(self.synapse_springs_uptime or 0, 3 if self.synapse_springs_uptime else 0),
+            ScoreWeight(self.fallen_crusader_uptime or 0, 3 if self.fallen_crusader_uptime else 0),
+            ScoreWeight(self.unholy_frenzy_uptime or 0, 10 if self.unholy_frenzy_uptime else 0),
+            ScoreWeight(self.bl_uptime or 0, 10 if self.bl_uptime else 0),
             ScoreWeight(
-                sum([t["uptime"].uptime() for t in self.trinket_uptimes])
-                / (len(self.trinket_uptimes) if self.trinket_uptimes else 1),
-                len(self.trinket_uptimes) * 2,
+                sum([t["uptime"].uptime() for t in self.trinket_uptimes if t["uptime"].uptime() > 0]) / 
+                (sum(1 for t in self.trinket_uptimes if t["uptime"].uptime() > 0) or 1),
+                sum(2 for t in self.trinket_uptimes if t["uptime"].uptime() > 0),
             ),
         )
+        return dark_transformation_score
 
 
 class DarkTransformationAnalyzer(BaseAnalyzer):
@@ -362,13 +361,11 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
 
     @property
     def possible_dark_transformations(self):
-        return max(1 + (self._fight_duration - 10000) // 35000, len(self.windows))
+        return max(1 + (self._fight_duration - 10000) // 40000, len(self.windows))
 
     def score(self):
         window_score = sum(window.score() for window in self.windows)
-        # used_synapse = any(window.synapse_springs_uptime for window in self.windows)
         return ScoreWeight.calculate(
-            # ScoreWeight(int(used_speed), 1),
             ScoreWeight(
                 window_score / self.possible_dark_transformations, 5 * self.possible_dark_transformations
             ),
@@ -808,6 +805,29 @@ class BloodTapAnalyzer(BaseAnalyzer):
             "blood_tap_max_usages": self.max_usages,
         }
 
+class AMSAnalyzer(BaseAnalyzer):
+    def __init__(self, fight_end_time):
+        self._num_used = 0
+        self._ams_cooldown = 60000
+        self._fight_end_time = fight_end_time
+
+    @property
+    def max_usages(self):
+        return max(1 + (self._fight_end_time - 10000) // self._ams_cooldown, self._num_used)
+
+    def add_event(self, event):
+        if event["type"] == "cast" and event["ability"] == "Anti-Magic Shield":
+            self._num_used += 1
+
+    def score(self):
+        return self._num_used / self.max_usages
+
+    def report(self):
+        return {
+            "ams_usages": self._num_used,
+            "ams_max_usages": self.max_usages,
+        }
+
 
 class UnholyAnalysisScorer(AnalysisScorer):
     def get_score_weights(self):
@@ -815,7 +835,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
 
         return {
             GargoyleAnalyzer: {
-                "weight": lambda ga: 5 * ga.possible_gargoyles,
+                "weight": lambda ga: 3 * ga.possible_gargoyles,
                 "exponent_factor": exponent_factor,
             },
             BloodPlagueAnalyzer: {
@@ -826,12 +846,16 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "weight": 3,
                 "exponent_factor": exponent_factor,
             },
+            DarkTransformationUptimeAnalyzer: {
+                "weight": 10,
+                "exponent_factor": exponent_factor,
+                },
             DarkTransformationAnalyzer: {
-                "weight": 3,
+                "weight": 4,
                 "exponent_factor": exponent_factor,
             },
             DeathAndDecayUptimeAnalyzer: {
-                "weight": 6,
+                "weight": 4,
                 "exponent_factor": exponent_factor,
             },
             MeleeUptimeAnalyzer: {
@@ -846,7 +870,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "exponent_factor": exponent_factor,
             },
             GhoulAnalyzer: {
-                "weight": 5,
+                "weight": 4,
                 "exponent_factor": exponent_factor,
             },
             BuffTracker: {
@@ -899,6 +923,7 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             ),
             ArmyAnalyzer(),
             BloodTapAnalyzer(fight.end_time),
+            # AMSAnalyzer(fight.end_time)
         ]
 
     def get_scorer(self, analyzers):
