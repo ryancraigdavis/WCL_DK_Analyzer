@@ -42,7 +42,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
             "Ascendant Council": self._check_ascendant_council,
             "Atramedes": self._check_atramedes,
             "Al'Akir": self._check_al_akir,
-            "Nefarion Dominion": self._check_nefarion_mind_control,
+            "Nefarion's End": self._check_nefarion_mind_control,
             "Loatheb": self._check_loatheb,
             "Thaddius": self._check_thaddius,
             "Maexxna": self._check_maexxna,
@@ -109,23 +109,20 @@ class DeadZoneAnalyzer(BasePreprocessor):
             self._dead_zones.append(dead_zone)
 
     def _check_nefarion_mind_control(self, event):
-        print(event["target"])
-        if event.get("target") not in ("Onyxia", "Nefarian"):
+        if event["ability"] not in ("Free Your Mind", "Siphon Power"):
             return
-        print(event["type"])
-        if event["type"] not in ("applydebuff", "removedebuff"):
-            return
-        print(event["ability"])
 
-        # if event["ability"] != "Dominion":
-        #     return
-
-        # if event["type"] == "applydebuff":
-        #     self._last_event = event
-        # elif event["type"] == "removedebuff":
-        #     dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
-        #     print(self._last_event["timestamp"], event["timestamp"])
-        #     self._dead_zones.append(dead_zone)
+        if (
+            not self._last_event
+            and event["ability"] == "Siphon Power"
+        ):
+            self._last_event = event
+        if event["ability"] == "Free Your Mind" and self._last_event:
+            dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            print(f"Deadzone Start: {self._last_event['timestamp']}")
+            print(f"Deadzone End: {event['timestamp']}")
+            self._dead_zones.append(dead_zone)
+            self._last_event = None
 
     def _check_algalon(self, event):
         if event["type"] not in ("applydebuff", "removedebuff"):
@@ -644,9 +641,11 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
             windows[-1] = Window(windows[-1].start, self._end_time)
         return windows
 
-    # @property
-    # def has_flask(self):
-    #     return bool(self._num_windows("Flask of Titanic Strength")) or bool(self._num_windows("Flask of Battle"))
+    @property
+    def has_flask(self):
+        # WCL is not reporting this accurate so for the sake of argument, setting to true
+        return True
+        # return bool(self._num_windows("Flask of Titanic Strength")) or bool(self._num_windows("Flask of Battle"))
 
     @property
     def num_pots(self):

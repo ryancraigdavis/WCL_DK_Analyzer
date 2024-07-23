@@ -135,6 +135,8 @@ class Analyzer:
                     "Blood Fury",
                     "Swordguard Embroidery",
                     "Unholy Strength",
+                    "Stolen Power",
+                    "Free Your Mind",
                     "Cinderglacier",
                     "Death Eater",  # T11 4pc
                     "Smoldering Rune",  # T12 2pc

@@ -107,7 +107,7 @@ const Summary = () => {
     }
   }, []);
 
-  {/*const formatFlask = useCallback((flaskUsage) => {
+  const formatFlask = useCallback((flaskUsage) => {
     const hasFlask = flaskUsage.has_flask;
 
     if (hasFlask) {
@@ -124,7 +124,7 @@ const Summary = () => {
         You did not have a Flask of Titanic Strength
       </div>
     );
-  }, []);*/}
+  }, []);
   {/*const formatRuneDrift = useCallback((runeDrift, infoOnly) => {
     const runeDriftMs = runeDrift.rune_drift_ms;
 
@@ -449,7 +449,7 @@ const Summary = () => {
             summary.bomb_usage.saronite_possible,
             "Saronite Bomb",
           )}
-{/*{summary.flask_usage && formatFlask(summary.flask_usage)}*/}
+        {summary.flask_usage && formatFlask(summary.flask_usage)}
         </div>
       </div>
     </div>

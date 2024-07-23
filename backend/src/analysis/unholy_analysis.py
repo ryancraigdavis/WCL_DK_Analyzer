@@ -793,7 +793,6 @@ class BloodTapAnalyzer(BaseAnalyzer):
 
     def add_event(self, event):
         self._max_blood_tap_cooldown = event["blood_tap_cooldown"]
-        print(self._max_blood_tap_cooldown)
         if event["type"] == "cast" and event["ability"] == "Blood Tap":
             self._num_used += 1
 
