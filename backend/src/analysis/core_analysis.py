@@ -644,9 +644,9 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
             windows[-1] = Window(windows[-1].start, self._end_time)
         return windows
 
-    @property
-    def has_flask(self):
-        return bool(self._num_windows("Flask of Titanic Strength")) or bool(self._num_windows("Flask of Battle"))
+    # @property
+    # def has_flask(self):
+    #     return bool(self._num_windows("Flask of Titanic Strength")) or bool(self._num_windows("Flask of Battle"))
 
     @property
     def num_pots(self):
@@ -1453,9 +1453,9 @@ class CoreAnalysisScorer(AnalysisScorer):
             T11UptimeAnalyzer: {
                 "weight": lambda t11a: t11a.score_weight(),
             },
-            T12UptimeAnalyzer: {
-                "weight": lambda t12a: t12a.score_weight(),
-            },
+            # T12UptimeAnalyzer: {
+            #     "weight": lambda t12a: t12a.score_weight(),
+            # },
         }
 
     def report(self):
