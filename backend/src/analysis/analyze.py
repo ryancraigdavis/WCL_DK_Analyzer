@@ -4,7 +4,6 @@ from analysis.core_analysis import (
     TalentPreprocessor,
     BuffTracker,
     PetNameDetector,
-    TalentPreprocessor,
 )
 from analysis.frost_analysis import (
     FrostAnalysisConfig,

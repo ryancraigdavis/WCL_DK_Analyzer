@@ -789,10 +789,11 @@ class BloodTapAnalyzer(BaseAnalyzer):
 
     @property
     def max_usages(self):
-        return max(1 + (self._fight_end_time - 10000) // self._max_blood_tap_cooldown, self._num_used)
+        return max(1 + (self._fight_end_time - (self._max_blood_tap_cooldown / 2)) // self._max_blood_tap_cooldown, self._num_used)
 
     def add_event(self, event):
         self._max_blood_tap_cooldown = event["blood_tap_cooldown"]
+        print(self._max_blood_tap_cooldown)
         if event["type"] == "cast" and event["ability"] == "Blood Tap":
             self._num_used += 1
 
@@ -888,9 +889,9 @@ class UnholyAnalysisScorer(AnalysisScorer):
             T11UptimeAnalyzer: {
                 "weight": lambda t11a: t11a.score_weight(),
             },
-            T12UptimeAnalyzer: {
-                "weight": lambda t12a: t12a.score_weight(),
-            },
+            # T12UptimeAnalyzer: {
+            #     "weight": lambda t12a: t12a.score_weight(),
+            # },
             BloodTapAnalyzer: {
                 "weight": 1,
             },
