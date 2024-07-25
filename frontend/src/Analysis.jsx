@@ -62,7 +62,7 @@ const formatRanking = (ranking) => {
 const Summary = () => {
   const analysis = useContext(LogAnalysisContext);
 
-  {/*const formatGCDLatency = useCallback((gcdLatency, infoOnly) => {
+  const formatGCDLatency = useCallback((gcdLatency, infoOnly) => {
     const averageLatency = gcdLatency.average_latency;
 
     let color = "green";
@@ -83,7 +83,6 @@ const Summary = () => {
       </div>
     );
   }, []);
-*/}
   const formatDiseases = useCallback((diseasesDropped) => {
     const numDiseasesDropped = diseasesDropped.num_diseases_dropped;
 
@@ -339,7 +338,7 @@ const Summary = () => {
     dps = "n/a"
   }
   const summary = data.analysis;
-  {/*  const isUnholy = data.spec === "Frost"*/}
+  const isUnholy = data.spec === "Frost"
   const showSpeed = data.show_speed
 
   return (
@@ -374,18 +373,18 @@ const Summary = () => {
           showSpeed && (
             <div className="analysis-section fight-analysis">
               <h3>Speed</h3>
-            {/*{formatGCDLatency(summary.gcd_latency, isUnholy)}
-              {formatRuneDrift(summary.rune_drift, isUnholy)}*/}
+              {formatGCDLatency(summary.gcd_latency, isUnholy)}
+            {/*{formatRuneDrift(summary.rune_drift, isUnholy)}*/}
               {summary.killing_machine && formatKillingMachine(summary.killing_machine)}
             </div>
           )
         }
         <div className="analysis-section">
-{/*
+
           <h3>Speed</h3>
           {formatGCDLatency(summary.gcd_latency, isUnholy)}
-          {formatRuneDrift(summary.rune_drift, isUnholy)}
-          <h3>Rotation</h3>*/}
+          {/*{formatRuneDrift(summary.rune_drift, isUnholy)}*/}
+          <h3>Rotation</h3>
           {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
           {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
           {summary.dark_transformation_uptime !== undefined && formatUpTime(summary.dark_transformation_uptime, "Dark Transformation", false, summary.dark_transformation_max_uptime)}

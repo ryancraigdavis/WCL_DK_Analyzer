@@ -21,7 +21,6 @@ from analysis.core_analysis import (
     MeleeUptimeAnalyzer,
     TrinketAnalyzer,
     BuffUptimeAnalyzer,
-    GCDAnalyzer,
     T11UptimeAnalyzer,
     T12UptimeAnalyzer,
 )
