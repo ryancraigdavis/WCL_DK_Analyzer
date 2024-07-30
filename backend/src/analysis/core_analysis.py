@@ -119,8 +119,8 @@ class DeadZoneAnalyzer(BasePreprocessor):
             self._last_event = event
         if event["ability"] == "Free Your Mind" and self._last_event:
             dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
-            print(f"Deadzone Start: {self._last_event['timestamp']}")
-            print(f"Deadzone End: {event['timestamp']}")
+            # print(f"Deadzone Start: {self._last_event['timestamp']}")
+            # print(f"Deadzone End: {event['timestamp']}")
             self._dead_zones.append(dead_zone)
             self._last_event = None
 

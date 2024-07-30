@@ -344,9 +344,10 @@ const Summary = () => {
   return (
     <div className={"analysis-summary"}>
     <div className="summary-data">
-          <h3>Summary Data</h3>
-          <pre>{JSON.stringify(summary, null, 2)}</pre>
+    {/*<h3>Summary Data</h3>
+          <pre>{JSON.stringify(summary, null, 2)}</pre>*/}
         </div>
+      
       <div className={"fight-summary"}>
         <h2>{fight.source}</h2>
         <div className={"summary-line"}>
