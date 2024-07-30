@@ -35,15 +35,16 @@ class BasePreprocessor:
 
 class ScoreWeight:
     def __init__(self, score, weight):
-        assert 0 <= score <= 1
+        # assert 0 <= score <= 1
         self.score = score
         self.weight = weight
 
     @staticmethod
     def calculate(*score_weights):
         total = sum(score.weight for score in score_weights)
+        if total == 0:
+            return 0.5
         return sum((score.score * score.weight) / total for score in score_weights)
-
 
 class AnalysisScorer(BaseAnalyzer):
     def __init__(self, analyzers):

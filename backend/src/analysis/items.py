@@ -15,9 +15,9 @@ class Trinket:
     def snapshots_gargoyle(self):
         raise NotImplementedError
 
-    @property
-    def snapshots_army_haste(self):
-        raise NotImplementedError
+    # @property
+    # def snapshots_army_haste(self):
+    #     raise NotImplementedError
 
 
 class APTrinket(Trinket):
@@ -26,48 +26,42 @@ class APTrinket(Trinket):
         return True
 
     @property
-    def snapshots_army_haste(self):
-        return False
+    def uptime_ghoul(self):
+        return True
+    # @property
+    # def snapshots_army_haste(self):
+    #     return False
 
 
 class HasteTrinket(Trinket):
     @property
+    def uptime_ghoul(self):
+        return True
+
+    @property
     def snapshots_gargoyle(self):
         return False
 
-    @property
-    def snapshots_army_haste(self):
-        return True
-
-
 class TrinketPreprocessor(BasePreprocessor):
     TRINKETS = [
-        APTrinket("Darkmoon Card: Greatness", 42987, "Greatness", 15, 45),
-        APTrinket("Wrathstone", 45263, "Wrathstone", 20, 120, on_use=True),
-        APTrinket("Blood of the Old God", 45522, "Blood of the Old God", 10, 50),
-        APTrinket("Pyrite Infuser", 45286, "Pyrite Infusion", 10, 50),
-        APTrinket("Mirror of Truth", 40684, "Reflection of Torment", 10, 50),
-        APTrinket("Death's Choice", 47464, "Paragon", 15, 45),
-        APTrinket("Death's Choice", 47303, "Paragon", 15, 45),
-        APTrinket("Death's Verdict", 47131, "Paragon", 15, 45),
-        APTrinket("Death's Verdict", 47115, "Paragon", 15, 45),
-        APTrinket("Victor's Call", 47725, "Rising Fury", 20, 120, on_use=True),
-        APTrinket("Victor's Call", 47948, "Rising Fury", 20, 120, on_use=True),
-        APTrinket(
-            "Vengeance of the Forsaken", 47881, "Rising Fury", 20, 120, on_use=True
-        ),
-        APTrinket(
-            "Vengeance of the Forsaken", 48020, "Rising Fury", 20, 120, on_use=True
-        ),
-        APTrinket("Mark of Supremacy", 47734, "Rage", 20, 120, on_use=True),
-        HasteTrinket(
-            "Mark of Norgannon", 40531, "Mark of Norgannon", 20, 120, on_use=True
-        ),
-        HasteTrinket("Comet's Trail", 45609, "Comet's Trail", 10, 45),
-        HasteTrinket("Meteorite Whetstone", 37390, "Meteorite Whetstone", 10, 45),
-        HasteTrinket(
-            "Shard of the Crystal Heart", 48722, "Celerity", 20, 120, on_use=True
-        ),
+        APTrinket("Right Eye of Rajh", 56100, "Eye of Doom", 10, 50),
+        APTrinket("Right Eye of Rajh", 56431, "Eye of Doom", 10, 50),
+        APTrinket("Heart of Rage", 65072, "Rageheart", 20, 100),
+        APTrinket("Heart of Rage", 59224, "Rageheart", 20, 100),
+        APTrinket("License to Slay", 58180, "Slayer", 15, 100),
+        APTrinket("Impatience of Youth", 62464, "Thrill of Victory", 20, 120, on_use=True),
+        APTrinket("Impatience of Youth", 62469, "Thrill of Victory", 20, 120, on_use=True),
+        APTrinket("Might of the Ocean", 56285, "Typhoon", 15, 90, on_use=True),
+        APTrinket("Might of the Ocean", 55251, "Typhoon", 15, 90, on_use=True),
+        APTrinket("Magnetite Mirror", 56345, "Polarization", 15, 90, on_use=True),
+        APTrinket("Magnetite Mirror", 55814, "Polarization", 15, 90, on_use=True),
+        APTrinket("King of Boars", 52351, "King of Boars", 20, 120, on_use=True),
+        APTrinket("Fury of Angerforge", 59461, "Forged Fury", 20, 120, on_use=True),
+        APTrinket("Heart of Solace", 56393, "Heartened", 20, 100),
+        APTrinket("Heart of Solace", 55868, "Heartened", 20, 100),
+        HasteTrinket("Crushing Weight", 65118, "Race Against Death", 15, 75),
+        HasteTrinket("Crushing Weight", 59506, "Race Against Death", 15, 75),
+        HasteTrinket("Shrine-Cleansing Purifier", 63838, "Fatality", 20, 100),
     ]
     TRINKET_MAP = {trinket.item_id: trinket for trinket in TRINKETS}
     TRINKEY_MAP_BY_BUFF_NAME = {trinket.buff_name: trinket for trinket in TRINKETS}
@@ -112,120 +106,91 @@ class TrinketPreprocessor(BasePreprocessor):
         return len(self._trinkets)
 
 
-class T9Preprocessor(BasePreprocessor):
+class T11Preprocessor(BasePreprocessor):
     def __init__(self, combatant_info):
-        self.has_2p = False
         self.has_4p = False
-        self._calc_num_t9(combatant_info)
+        self._calc_num_t11(combatant_info)
 
-    def _calc_num_t9(self, combatant_info):
+    def _calc_num_t11(self, combatant_info):
         count = 0
 
         for item in combatant_info.get("gear", []):
             if item["id"] in {
-                # Ally
                 # Head
-                48472,
-                48483,
-                48488,
+                65181,
+                60341,
                 # Shoulders
-                48478,
-                48485,
-                48486,
+                65183,
+                60343,
                 # Chest
-                48474,
-                48481,
-                48490,
+                65179,
+                60339,
                 # Legs
-                48476,
-                48484,
-                48487,
+                65182,
+                60342,
                 # Hands
-                48480,
-                48482,
-                48489,
-                # Horde
-                # Head
-                48503,
-                48493,
-                48498,
-                # Shoulders
-                48505,
-                48495,
-                48495,
-                # Chest
-                48501,
-                48491,
-                48500,
-                # Legs
-                48504,
-                48494,
-                48497,
-                # Hands
-                48502,
-                48492,
-                48499,
+                65180,
+                60340,
             }:
                 count += 1
-        if count >= 2:
-            self.has_2p = True
         if count >= 4:
             self.has_4p = True
 
     def preprocess_event(self, event):
-        if event["type"] == "applybuff" and event["ability"] == "Unholy Might":
+        if event["type"] == "applybuff" and event["ability"] == "Death Eater":
+            self.has_4p = True
+
+    @property
+    def max_uptime(self):
+        return 0.98
+
+class T12Preprocessor(BasePreprocessor):
+    def __init__(self, combatant_info):
+        self.has_2p = False
+        self._calc_num_t12(combatant_info)
+
+    def _calc_num_t12(self, combatant_info):
+        count = 0
+        for item in combatant_info.get("gear", []):
+            if item["id"] in {
+                # Head
+                71478,
+                71060,
+                # Shoulders
+                71480,
+                71062,
+                # Chest
+                71058,
+                71476,
+                # Legs
+                71479,
+                71061,
+                # Hands
+                71477,
+                71059,
+            }:
+                count += 1
+        if count >= 2:
+            self.has_2p = True
+
+    def preprocess_event(self, event):
+        if event["type"] == "applybuff" and event["ability"] == "Smoldering Rune":
             self.has_2p = True
 
     @property
     def max_uptime(self):
-        return 0.28
-
-
-class SigilPreprocessor(BasePreprocessor):
-    class Sigil:
-        def __init__(self, name, item_id, buff_name, max_uptime):
-            self.name = name
-            self.item_id = item_id
-            self.buff_name = buff_name
-            self.max_uptime = max_uptime
-
-    _sigils = [
-        Sigil("Sigil of Virulence", 47673, "Unholy Force", 0.70),
-    ]
-    _sigil_map = {sigil.item_id: sigil for sigil in _sigils}
-    _sigil_buff_name_map = {sigil.buff_name: sigil for sigil in _sigils}
-
-    def __init__(self, combatant_info):
-        self.sigil = None
-        self._calc_sigil(combatant_info)
-
-    def _calc_sigil(self, combatant_info):
-        for item in combatant_info.get("gear", []):
-            if item["id"] in self._sigil_map:
-                self.sigil = self._sigil_map[item["id"]]
-                break
-
-    def preprocess_event(self, event):
-        if self.sigil:
-            return
-
-        if (
-            event["type"] == "applybuff"
-            and event["ability"] in self._sigil_buff_name_map
-        ):
-            self.sigil = self._sigil_buff_name_map[event["ability"]]
-
+        return 0.98
 
 class ItemPreprocessor(BasePreprocessor):
     def __init__(self, combatant_info):
         self._trinkets = TrinketPreprocessor(combatant_info)
-        self._t9 = T9Preprocessor(combatant_info)
-        self._sigil = SigilPreprocessor(combatant_info)
+        self._t11 = T11Preprocessor(combatant_info)
+        self._t12 = T12Preprocessor(combatant_info)
 
         self._processors = [
             self._trinkets,
-            self._t9,
-            self._sigil,
+            self._t11,
+            self._t12,
         ]
 
     def preprocess_event(self, event):
@@ -235,16 +200,18 @@ class ItemPreprocessor(BasePreprocessor):
     def has_trinket(self, buff_name):
         return self._trinkets.has_trinket(buff_name)
 
-    def has_t9_2p(self):
-        return self._t9.has_2p
+    def has_t11_4p(self):
+        return self._t11.has_4p
 
-    def t9_max_uptime(self):
-        return self._t9.max_uptime
+    def has_t12_2p(self):
+        return self._t12.has_2p
+
+    def t11_max_uptime(self):
+        return self._t11.max_uptime
+
+    def t12_max_uptime(self):
+        return self._t12.max_uptime
 
     @property
     def trinkets(self):
         return list(self._trinkets)
-
-    @property
-    def sigil(self):
-        return self._sigil.sigil

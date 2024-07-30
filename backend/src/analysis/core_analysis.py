@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import Optional
+import json
 
 from analysis.base import (
     AnalysisScorer,
@@ -19,8 +20,9 @@ class DeadZoneAnalyzer(BasePreprocessor):
         "Melee",
         "Obliterate",
         "Frost Strike",
-        "Blood Strike",
+        "Festering Strike",
         "Plague Strike",
+        "Scourge Strike",
         "Pestilence",
     }
 
@@ -37,6 +39,10 @@ class DeadZoneAnalyzer(BasePreprocessor):
         self._last_event = None
         self._last_timestamp = 0
         self._checker = {
+            "Ascendant Council": self._check_ascendant_council,
+            "Atramedes": self._check_atramedes,
+            "Al'Akir": self._check_al_akir,
+            "Nefarion's End": self._check_nefarion_mind_control,
             "Loatheb": self._check_loatheb,
             "Thaddius": self._check_thaddius,
             "Maexxna": self._check_maexxna,
@@ -44,7 +50,6 @@ class DeadZoneAnalyzer(BasePreprocessor):
             "Ignis the Furnace Master": self._check_ignis,
             "Razorscale": self._check_razorscale,
             "Algalon the Observer": self._check_algalon,
-            "General Vezax": self._check_vezax,
             "The Northrend Beasts": self._check_boss_events_occur,
             "Anub'arak": self._check_boss_events_occur,
         }.get(self._fight.encounter.name)
@@ -52,6 +57,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
         self._is_hard_mode = self._fight.is_hard_mode
 
     def _check_boss_events_occur(self, event):
+
         if event.get("source_is_boss") or (
             event.get("target_is_boss") and event["type"] == "cast"
         ):
@@ -60,28 +66,63 @@ class DeadZoneAnalyzer(BasePreprocessor):
                 self._dead_zones.append(dead_zone)
             self._last_timestamp = event["timestamp"]
 
-    def _check_vezax(self, event):
-        if not self._is_hard_mode:
+    def _check_ascendant_council(self, event):
+        if event.get("target") not in ("Ignacious", "Arion", "Terrastra", "Feludius", "Elementium Monstrosity"):
             return
 
         if (
             not self._last_event
             and event["type"] == "damage"
-            and event["target"] == "General Vezax"
+            and event["target"] in ("Arion", "Terrastra")
             and "hitPoints" in event
-            and event["hitPoints"] / event["maxHitPoints"] <= 0.05
+            and event["hitPoints"] / event["maxHitPoints"] <= 0.25
         ):
             self._last_event = event
         if (
             (
-                event.get("source") == "Saronite Animus"
-                or event.get("target") == "Saronite Animus"
+                event.get("source") == "Elementium Monstrosity"
+                or event.get("target") == "Elementium Monstrosity"
             )
             and self._last_event
             and not self._dead_zones
         ):
             dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
             self._dead_zones.append(dead_zone)
+
+    def _check_al_akir(self, event):
+        if event.get("target") != "Al'Akir":
+            return
+        if (
+            not self._last_event
+            and event["type"] == "damage"
+            and event["target"] == "Al'Akir"
+            and "hitPoints" in event
+            and event["hitPoints"] / event["maxHitPoints"] <= 0.25
+        ):
+            self._last_event = event
+        if (
+            self._last_event
+            and not self._dead_zones
+            and event["timestamp"] - self._last_event["timestamp"] > 5000
+        ):
+            dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            self._dead_zones.append(dead_zone)
+
+    def _check_nefarion_mind_control(self, event):
+        if event["ability"] not in ("Free Your Mind", "Siphon Power"):
+            return
+
+        if (
+            not self._last_event
+            and event["ability"] == "Siphon Power"
+        ):
+            self._last_event = event
+        if event["ability"] == "Free Your Mind" and self._last_event:
+            dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            # print(f"Deadzone Start: {self._last_event['timestamp']}")
+            # print(f"Deadzone End: {event['timestamp']}")
+            self._dead_zones.append(dead_zone)
+            self._last_event = None
 
     def _check_algalon(self, event):
         if event["type"] not in ("applydebuff", "removedebuff"):
@@ -121,6 +162,31 @@ class DeadZoneAnalyzer(BasePreprocessor):
         elif event["type"] == "removedebuff":
             dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
             self._dead_zones.append(dead_zone)
+
+    def _check_atramedes(self, event):
+        if event.get("target") != "Atramedes" and event.get("source") != "Atramedes":
+            return
+
+        current_time = event["timestamp"]
+
+        # Check if it's the first event
+        if self._last_timestamp == 0:
+            self._last_timestamp = current_time
+            return
+
+        phase_duration = 125000  # 125 seconds for a full cycle
+        current_phase_time = current_time % phase_duration
+
+        # Check for the air phase (85-125 seconds in each cycle)
+        if 85000 < current_phase_time <= 125000:
+            # If this is the start of an air phase, create a dead zone
+            if self._last_timestamp % phase_duration <= 85000:
+                dead_zone_start = (current_time // phase_duration) * phase_duration + 85000
+                dead_zone_end = dead_zone_start + 40000  # 40 seconds air phase
+                dead_zone = self.DeadZone(dead_zone_start, dead_zone_end)
+                self._dead_zones.append(dead_zone)
+
+        self._last_timestamp = current_time
 
     def _check_maexxna(self, event):
         if event["type"] not in ("removedebuff", "applydebuff"):
@@ -286,7 +352,7 @@ class Rune:
 
 
 class RuneTracker(BaseAnalyzer):
-    def __init__(self, should_convert_blood, track_drift_type):
+    def __init__(self, should_convert_blood, should_convert_frost, track_drift_type):
         self.runes = [
             Rune("Blood1", "Blood"),
             Rune("Blood2", "Blood"),
@@ -298,6 +364,7 @@ class RuneTracker(BaseAnalyzer):
         self.rune_grace_wasted = 0
         self.rune_spend_error = False
         self._should_convert_blood = should_convert_blood
+        self._should_convert_frost = should_convert_frost
         self._track_drift_type = track_drift_type
 
     @property
@@ -373,13 +440,16 @@ class RuneTracker(BaseAnalyzer):
 
     def spend(self, ability, timestamp: int, blood: int, frost: int, unholy: int):
         convert_blood = self._should_convert_blood and ability in (
-            "Blood Strike",
+            "Festering Strike",
             "Pestilence",
+        )
+        convert_frost = self._should_convert_frost and ability in (
+            "Festering Strike",
         )
         blood_spend = self._spend_runes(
             blood, self.runes[0:2], timestamp, convert_blood
         )
-        frost_spend = self._spend_runes(frost, self.runes[2:4], timestamp)
+        frost_spend = self._spend_runes(frost, self.runes[2:4], timestamp, convert_frost)
         unholy_spend = self._spend_runes(unholy, self.runes[4:6], timestamp)
 
         spent = blood_spend[0] and frost_spend[0] and unholy_spend[0]
@@ -573,15 +643,45 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
 
     @property
     def has_flask(self):
-        return bool(self._num_windows("Flask of Endless Rage"))
+        # WCL is not reporting this accurate so for the sake of argument, setting to true
+        return True
+        # return bool(self._num_windows("Flask of Titanic Strength")) or bool(self._num_windows("Flask of Battle"))
 
     @property
     def num_pots(self):
-        return self._num_windows("Speed") + self._num_windows("Indestructible")
+        return self._num_windows("Golem's Strength")
+
+    @property
+    def has_bl(self):
+        return bool(self._num_windows("Bloodlust")) or bool(self._num_windows("Heroism")) or bool(self._num_windows("Time Warp"))
+
+    @property
+    def has_crushing_weight(self):
+        return bool(self._num_windows("Race Against Death"))
+
+    @property
+    def has_potion(self):
+        return bool(self._num_windows("Golem's Strength"))
+
+    @property
+    def has_fatality(self):
+        return bool(self._num_windows("Fatality"))
+
+    @property
+    def has_unholy_frenzy(self):
+        return bool(self._num_windows("Unholy Frenzy"))
+
+    @property
+    def has_synapse_springs(self):
+        return bool(self._num_windows("Synapse Springs"))
 
     @property
     def has_berserking(self):
         return bool(self._num_windows("Berserking"))
+
+    @property
+    def has_fallen_crusader(self):
+        return bool(self._num_windows("Unholy Strength"))
 
     @property
     def has_bloodfury(self):
@@ -615,11 +715,9 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
                             presence_windows.pop()
                 windows.add_window(0)
         elif event["type"] == "applybuff":
-            if event["ability"] in ("Speed", "Indestructible"):
-                if self.is_active("Speed", event["timestamp"]):
-                    self._buff_windows["Speed"].pop()
-                elif self.is_active("Indestructible", event["timestamp"]):
-                    self._buff_windows["Indestructible"].pop()
+            if event["ability"] in ("Golem's Strength"):
+                if self.is_active("Golem's Strength", event["timestamp"]):
+                    self._buff_windows["Golem's Strength"].pop()
 
             if not windows.has_active_window:
                 windows.add_window(event["timestamp"])
@@ -646,8 +744,10 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
         if self._spec == "Frost":
             total_pots = max(2, self.num_pots)
             pot_score = self.num_pots / total_pots * 0.5
-            flask_score = 0.5 if self.has_flask else 0
-            return pot_score + flask_score
+            # potentially need to fix flasks
+            # flask_score = 0.5 if self.has_flask else 0
+            return pot_score
+            # return pot_score + flask_score
         return int(self.has_flask)
 
     def report(self):
@@ -655,11 +755,11 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
             "flask_usage": {
                 "has_flask": self.has_flask,
             },
+            "potions_used": self.num_pots,
         }
-        if self._spec == "Frost":
-            ret["potion_usage"] = {
+        ret["potion_usage"] = {
                 "potions_used": self.num_pots,
-            }
+        }
         return ret
 
     def is_active(self, buff, timestamp):
@@ -762,25 +862,27 @@ class RPAnalyzer(BaseAnalyzer):
 
 class GCDAnalyzer(BaseAnalyzer):
     NO_GCD = {
-        "Unbreakable Armor",
+        "Pillar of Frost",
         "Blood Tap",
         "Global Thermal Sapper Charge",
         "Saronite Bomb",
-        "Speed",
+        "Golem's Strength",
         "Empower Rune Weapon",
         "Cobalt Frag Bomb",
-        "Hyperspeed Acceleration",
+        "Synapse Springs",
         "Blood Fury",
         "Berserking",
-        "Indestructible",
-        "Deathchill",
         "Melee",
         "Path of Illidan",
         "Anti-Magic Shell",
         "Unholy Frenzy",
-        "Wrathstone",
-        "Mark of Norgannon",
         "Mind Freeze",
+        "Thrill of Victory",
+        "Typhoon",
+        "Polarization",
+        "King of Boars",
+        "Forged Fury",
+        "Battle Prowess",
         "Blood Presence",
         "Frost Presence",
         "Unholy Presence",
@@ -865,7 +967,7 @@ class GCDAnalyzer(BaseAnalyzer):
 
 
 class DiseaseAnalyzer(BaseAnalyzer):
-    DISEASE_DURATION_MS = 15000
+    DISEASE_DURATION_MS = 33000
 
     def __init__(self, encounter_name, fight_end_time):
         self._dropped_diseases_timestamp = []
@@ -926,12 +1028,45 @@ class DiseaseAnalyzer(BaseAnalyzer):
             }
         }
 
+class TalentPreprocessor(BasePreprocessor):
+
+    def __init__(self, combatant_info):
+        self._combatant_info = combatant_info
+        self._blood_tap_cooldown = 60000
+        self._disease_duration = 21000
+
+    def preprocess_event(self, event):
+        self.blood_tap_cooldown()
+        self.disease_duration()
+
+    def blood_tap_cooldown(self):
+        _talents = self._combatant_info.get("talents")
+        if _talents[0]["id"] == 6:
+            self._blood_tap_cooldown = 45000
+        elif _talents[0]["id"] == 7:
+            self._blood_tap_cooldown = 30000
+        else:
+            self._blood_tap_cooldown = 60000
+
+    def disease_duration(self):
+        # Need to add calc for masterfrost eventually
+        # and add link for frost
+        _talents = self._combatant_info.get("talents")
+        if _talents[2]["id"] >= 11:
+            self._disease_duration = 33000
+
+    def decorate_event(self, event):
+        event["blood_tap_cooldown"] = self._blood_tap_cooldown
+        event["disease_duration"] = self._disease_duration
+
 
 class BombAnalyzer(BaseAnalyzer):
     def __init__(self, fight_duration):
         self._fight_duration = fight_duration
         self._num_thermals = 0
         self._num_saronites = 0
+        self._num_big_daddys = 0
+        self._num_explosive_bolts = 0
 
     def add_event(self, event):
         if event["type"] != "cast":
@@ -942,6 +1077,12 @@ class BombAnalyzer(BaseAnalyzer):
 
         if event["ability"] == "Saronite Bomb":
             self._num_saronites += 1
+
+        if event["ability"] == "Big Daddy":
+            self._num_big_daddys += 1
+
+        if event["ability"] == "Explosive Bolts":
+            self._num_explosive_bolts += 1
 
     @property
     def possible_thermals(self):
@@ -977,31 +1118,31 @@ class BombAnalyzer(BaseAnalyzer):
         }
 
 
-class HyperspeedAnalyzer(BaseAnalyzer):
+class SynapseSpringsAnalyzer(BaseAnalyzer):
     def __init__(self, fight_duration):
         self._fight_duration = fight_duration
-        self._num_hyperspeeds = 0
+        self._num_synapse_springs = 0
 
     def add_event(self, event):
-        if event["type"] == "cast" and event["ability"] == "Hyperspeed Acceleration":
-            self._num_hyperspeeds += 1
+        if event["type"] == "cast" and event["ability"] == "Synapse Springs":
+            self._num_synapse_springs += 1
 
     @property
-    def possible_hyperspeeds(self):
-        return max(1 + (self._fight_duration - 5000) // 63000, self._num_hyperspeeds)
+    def possible_synapse_springs(self):
+        return max(1 + (self._fight_duration - 5000) // 63000, self._num_synapse_springs)
 
     def score(self):
         return (
-            self._num_hyperspeeds / self.possible_hyperspeeds
-            if self.possible_hyperspeeds
+            self._num_synapse_springs / self.possible_synapse_springs
+            if self.possible_synapse_springs
             else 1
         )
 
     def report(self):
         return {
-            "hyperspeed": {
-                "num_possible": self.possible_hyperspeeds,
-                "num_actual": self._num_hyperspeeds,
+            "synapse_springs": {
+                "num_possible": self.possible_synapse_springs,
+                "num_actual": self._num_synapse_springs,
             }
         }
 
@@ -1010,14 +1151,16 @@ class CoreAbilities(BaseAnalyzer):
     CORE_ABILITIES = {
         "Icy Touch",
         "Plague Strike",
-        "Unbreakable Armor",
+        "Pillar of Frost",
         "Obliterate",
         "Pestilence",
         "Howling Blast",
-        "Blood Strike",
-        "Blood Boil",
+        "Scourge Strike",
+        "Festering Strike",
+        "Dark Transformation",
+        "Death Coil",
+        "Frost Strike",
         "Death and Decay",
-        "Ghoul Frenzy",
     }
 
     def add_event(self, event):
@@ -1131,7 +1274,7 @@ class TrinketAnalyzer(BaseAnalyzer):
         )
 
 
-class T9UptimeAnalyzer(BaseAnalyzer):
+class T11UptimeAnalyzer(BaseAnalyzer):
     def __init__(
         self,
         fight_duration,
@@ -1141,43 +1284,42 @@ class T9UptimeAnalyzer(BaseAnalyzer):
     ):
         self._fight_duration = fight_duration
         self._items = items
-        self._has_2p = items.has_t9_2p()
-        self._t9_uptime = BuffUptimeAnalyzer(
+        self._has_4p = items.has_t11_4p()
+        self._t11_uptime = BuffUptimeAnalyzer(
             fight_duration,
             buff_tracker,
             ignore_windows,
-            "Unholy Might",
+            "Death Eater",
         )
 
     def add_event(self, event):
-        if not self._has_2p:
+        if not self._has_4p:
             return
 
-        self._t9_uptime.add_event(event)
+        self._t11_uptime.add_event(event)
 
     def report(self):
-        if not self._has_2p:
+        if not self._has_4p:
             return {}
 
         return {
-            "t9_uptime": self._t9_uptime.uptime(),
-            "t9_max_uptime": self._items.t9_max_uptime(),
+            "t11_uptime": self._t11_uptime.uptime(),
+            "t11_max_uptime": self._items.t11_max_uptime(),
         }
 
     def score(self):
-        if not self._has_2p:
+        if not self._has_4p:
             return 0
 
-        return min(self._t9_uptime.score() / self._items.t9_max_uptime(), 1)
+        return min(self._t11_uptime.score() / self._items.t11_max_uptime(), 1)
 
     def score_weight(self):
-        if not self._has_2p:
+        if not self._has_4p:
             return 0
 
         return 2
 
-
-class SigilUptimeAnalyzer(BaseAnalyzer):
+class T12UptimeAnalyzer(BaseAnalyzer):
     def __init__(
         self,
         fight_duration,
@@ -1186,45 +1328,42 @@ class SigilUptimeAnalyzer(BaseAnalyzer):
         ignore_windows,
     ):
         self._fight_duration = fight_duration
-        self._sigil_uptime = (
-            BuffUptimeAnalyzer(
-                fight_duration,
-                buff_tracker,
-                ignore_windows,
-                items.sigil.buff_name,
-            )
-            if items.sigil
-            else None
-        )
         self._items = items
+        self._has_2p = items.has_t12_2p()
+        self._t12_uptime = BuffUptimeAnalyzer(
+            fight_duration,
+            buff_tracker,
+            ignore_windows,
+            "Death Eater",
+        )
 
     def add_event(self, event):
-        if not self._sigil_uptime:
+        if not self._has_2p:
             return
 
-        self._sigil_uptime.add_event(event)
+        self._t12_uptime.add_event(event)
 
     def report(self):
-        if not self._sigil_uptime:
+        if not self._has_2p:
             return {}
 
         return {
-            "sigil_uptime": self._sigil_uptime.uptime(),
-            "sigil_max_uptime": self._items.sigil.max_uptime,
-            "sigil_name": self._items.sigil.name,
+            "t12_uptime": self._t12_uptime.uptime(),
+            "t12_max_uptime": self._items.t12_max_uptime(),
         }
 
     def score(self):
-        if not self._sigil_uptime:
+        if not self._has_2p:
             return 0
 
-        return min(self._sigil_uptime.score() / self._items.sigil.max_uptime, 1)
+        return min(self._t12_uptime.score() / self._items.t12_max_uptime(), 1)
 
     def score_weight(self):
-        if not self._sigil_uptime:
+        if not self._has_2p:
             return 0
 
         return 2
+
 
 
 class BuffUptimeAnalyzer(BaseAnalyzer):
@@ -1301,7 +1440,7 @@ class CoreAnalysisScorer(AnalysisScorer):
             BombAnalyzer: {
                 "weight": 2,
             },
-            HyperspeedAnalyzer: {
+            SynapseSpringsAnalyzer: {
                 "weight": 2,
             },
             MeleeUptimeAnalyzer: {
@@ -1310,12 +1449,12 @@ class CoreAnalysisScorer(AnalysisScorer):
             TrinketAnalyzer: {
                 "weight": lambda ta: ta.num_on_use_trinkets,
             },
-            T9UptimeAnalyzer: {
-                "weight": lambda t9a: t9a.score_weight(),
+            T11UptimeAnalyzer: {
+                "weight": lambda t11a: t11a.score_weight(),
             },
-            SigilUptimeAnalyzer: {
-                "weight": lambda sa: sa.score_weight(),
-            },
+            # T12UptimeAnalyzer: {
+            #     "weight": lambda t12a: t12a.score_weight(),
+            # },
         }
 
     def report(self):
@@ -1336,13 +1475,13 @@ class CoreAnalysisConfig:
             RPAnalyzer(),
             CoreAbilities(),
             BombAnalyzer(fight.duration),
-            HyperspeedAnalyzer(fight.duration),
+            SynapseSpringsAnalyzer(fight.duration),
             MeleeUptimeAnalyzer(fight.duration, dead_zone_analyzer.get_dead_zones()),
             TrinketAnalyzer(fight.duration, items),
-            T9UptimeAnalyzer(
+            T11UptimeAnalyzer(
                 fight.duration, buff_tracker, items, dead_zone_analyzer.get_dead_zones()
             ),
-            SigilUptimeAnalyzer(
+            T12UptimeAnalyzer(
                 fight.duration, buff_tracker, items, dead_zone_analyzer.get_dead_zones()
             ),
         ]

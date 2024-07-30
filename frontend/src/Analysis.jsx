@@ -7,6 +7,7 @@ import UnholyRune from "./assets/unholy_rune.webp";
 import DeathRune from "./assets/death_rune.webp";
 import { ArmyAnalysis } from "./ArmyAnalysis.jsx"
 import { GargoyleAnalysis } from "./GargoyleAnalysis"
+import { DarkTransformationAnalysis } from "./DarkTransformationAnalysis"
 import { GhoulAnalysis } from "./GhoulAnalysis.jsx"
 import { formatCPM, formatIcon, formatTimestamp, formatUpTime, formatUsage, Tooltip } from "./helpers"
 
@@ -82,7 +83,6 @@ const Summary = () => {
       </div>
     );
   }, []);
-
   const formatDiseases = useCallback((diseasesDropped) => {
     const numDiseasesDropped = diseasesDropped.num_diseases_dropped;
 
@@ -113,19 +113,18 @@ const Summary = () => {
       return (
         <div className={"flask-usage"}>
           <i className="fa fa-check green" aria-hidden="true"></i>
-          You had a Flask of Endless Rage
+          You had a Flask of Titanic Strength
         </div>
       );
     }
     return (
       <div className={"flask-usage"}>
         <i className="fa fa-times red" aria-hidden="true"></i>
-        You did not have a Flask of Endless Rage
+        You did not have a Flask of Titanic Strength
       </div>
     );
   }, []);
-
-  const formatRuneDrift = useCallback((runeDrift, infoOnly) => {
+  {/*const formatRuneDrift = useCallback((runeDrift, infoOnly) => {
     const runeDriftMs = runeDrift.rune_drift_ms;
 
     let color = "green";
@@ -149,6 +148,7 @@ const Summary = () => {
     );
   }, []);
 
+*/}
   const formatKillingMachine = useCallback((killingMachine) => {
     const averageLatency = killingMachine.avg_latency;
     const averageLatencySeconds = averageLatency / 1000;
@@ -205,14 +205,14 @@ const Summary = () => {
       return (
         <div className={"potions"}>
           <i className="fa fa-check green" aria-hidden="true"></i>
-          You used <span className={"hl"}>{potionsUsed} of {total}</span> Potions (Speed or Indestructible)
+          You used <span className={"hl"}>{potionsUsed} of {total}</span> Potions (Golem's Blood)
         </div>
       );
     }
     return (
       <div className={"potions"}>
         <i className="fa fa-times red" aria-hidden="true"></i>
-        You used <span className={"hl"}>{potionsUsed} of 2</span> Potions (Speed or Indestructible)
+        You used <span className={"hl"}>{potionsUsed} of 2</span> Potions (Golem's Blood)
       </div>
     );
   }, []);
@@ -338,11 +338,16 @@ const Summary = () => {
     dps = "n/a"
   }
   const summary = data.analysis;
-  const isUnholy = data.spec === "Unholy"
+  const isUnholy = data.spec === "Frost"
   const showSpeed = data.show_speed
 
   return (
     <div className={"analysis-summary"}>
+    <div className="summary-data">
+    {/*<h3>Summary Data</h3>
+          <pre>{JSON.stringify(summary, null, 2)}</pre>*/}
+        </div>
+      
       <div className={"fight-summary"}>
         <h2>{fight.source}</h2>
         <div className={"summary-line"}>
@@ -370,40 +375,46 @@ const Summary = () => {
             <div className="analysis-section fight-analysis">
               <h3>Speed</h3>
               {formatGCDLatency(summary.gcd_latency, isUnholy)}
-              {formatRuneDrift(summary.rune_drift, isUnholy)}
+            {/*{formatRuneDrift(summary.rune_drift, isUnholy)}*/}
               {summary.killing_machine && formatKillingMachine(summary.killing_machine)}
             </div>
           )
         }
         <div className="analysis-section">
+
+          <h3>Speed</h3>
+          {formatGCDLatency(summary.gcd_latency, isUnholy)}
+          {/*{formatRuneDrift(summary.rune_drift, isUnholy)}*/}
           <h3>Rotation</h3>
           {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
           {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
-          {summary.desolation_uptime !== undefined && formatUpTime(summary.desolation_uptime, "Desolation")}
-          {summary.sigil_uptime !== undefined && formatUpTime(summary.sigil_uptime, summary.sigil_name, false, summary.sigil_max_uptime)}
-          {summary.ghoul_frenzy_uptime !== undefined && formatUpTime(summary.ghoul_frenzy_uptime, "Ghoul Frenzy", false, summary.ghoul_frenzy_max_uptime)}
-          {summary.t9_uptime !== undefined && formatUpTime(summary.t9_uptime, "Unholy Might (T9 2p)", false, summary.t9_max_uptime)}
+          {summary.dark_transformation_uptime !== undefined && formatUpTime(summary.dark_transformation_uptime, "Dark Transformation", false, summary.dark_transformation_max_uptime)}
+          {summary.t11_uptime !== undefined && formatUpTime(summary.t11_uptime, "Death Eater (T11 4p)", false, summary.t11_max_uptime)}
           {summary.melee_uptime !== undefined && formatUpTime(summary.melee_uptime, "Melee")}
           {summary.unbreakable_armor && formatUA(summary.unbreakable_armor)}
           {summary.blood_plague_uptime !== undefined && formatUpTime(summary.blood_plague_uptime, "Blood Plague")}
           {summary.frost_fever_uptime !== undefined && formatUpTime(summary.frost_fever_uptime, "Frost Fever")}
-          {summary.blood_presence_uptime !== undefined && formatUpTime(summary.blood_presence_uptime, "Blood Presence (outside of Gargoyle)")}
+          {summary.unholy_presence_uptime !== undefined && formatUpTime(summary.unholy_presence_uptime, "Unholy Presence")}
           {summary.blood_tap_usages !== undefined && formatUsage(summary.blood_tap_usages, summary.blood_tap_max_usages, "Blood Tap")}
-          {summary.bone_shield_uptime !== undefined && formatUpTime(summary.bone_shield_uptime, "Bone Shield", true)}
           {summary.diseases_dropped && formatDiseases(summary.diseases_dropped)}
           {summary.raise_dead_usage && formatUsage(summary.raise_dead_usage.num_usages, summary.raise_dead_usage.possible_usages, "Raise Dead")}
           {summary.howling_blast_bad_usages && formatHowlingBlast(summary.howling_blast_bad_usages)}
           {summary.runic_power && formatRunicPower(summary.runic_power)}
           {summary.rime && formatRime(summary.rime)}
         </div>
-        {summary.gargoyle && (
-          <div className="analysis-section">
-            <GargoyleAnalysis gargoyle={summary.gargoyle} />
-          </div>
-        )}
         {summary.ghoul && (
           <div className="analysis-section">
             <GhoulAnalysis ghoul={summary.ghoul} />
+          </div>
+        )}
+        {summary.dark_transformation && (
+          <div className="analysis-section">
+            <DarkTransformationAnalysis dark_transformation={summary.dark_transformation} />
+          </div>
+        )}
+        {summary.gargoyle && (
+          <div className="analysis-section">
+            <GargoyleAnalysis gargoyle={summary.gargoyle} />
           </div>
         )}
         {summary.army && (
@@ -422,10 +433,10 @@ const Summary = () => {
               )}
             </div>
           ))}
-          {summary.hyperspeed && formatUsage(
-            summary.hyperspeed.num_actual,
-            summary.hyperspeed.num_possible,
-            "Hyperspeed Accelerators",
+          {summary.synapse_springs && formatUsage(
+            summary.synapse_springs.num_actual,
+            summary.synapse_springs.num_possible,
+            "Synapse Springs",
           )}
           {summary.potion_usage && formatPotions(summary.potion_usage)}
           {summary.bomb_usage && formatUsage(
@@ -438,7 +449,7 @@ const Summary = () => {
             summary.bomb_usage.saronite_possible,
             "Saronite Bomb",
           )}
-          {summary.flask_usage && formatFlask(summary.flask_usage)}
+        {summary.flask_usage && formatFlask(summary.flask_usage)}
         </div>
       </div>
     </div>
@@ -621,7 +632,7 @@ export const Analysis = () => {
   const events = data.events;
   const summary = data.analysis;
 
-  const runeWarning = () => {
+  {/*  const runeWarning = () => {
     const warning = <i className={"fa fa-warning yellow"} />;
     if (summary.has_rune_spend_error) {
       return (
@@ -629,7 +640,7 @@ export const Analysis = () => {
       );
     }
     return <span>{warning} Runes shown are a best-effort approximation</span>;
-  };
+  };*/}
 
   return (
     <>
@@ -637,7 +648,7 @@ export const Analysis = () => {
         <i className="fa fa-external-link" aria-hidden="true" />
       </a>
       <Summary />
-      {runeWarning()}
+    {/*{runeWarning()}*/}
       <div className={"events-table"}>
         <table>
           <thead>

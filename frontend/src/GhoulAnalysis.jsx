@@ -1,4 +1,4 @@
-import {booleanCheck, formatUpTime, formatCPM, hl, Info} from "./helpers"
+import {booleanCheck, formatUpTime, hl, Info} from "./helpers"
 
 export const GhoulAnalysis = ({ghoul}) => {
   return (
@@ -10,7 +10,14 @@ export const GhoulAnalysis = ({ghoul}) => {
       </div>
       {formatUpTime(ghoul.melee_uptime, "Melee")}
       {formatUpTime(ghoul.uptime, "Alive")}
-      {formatCPM(ghoul.claw_cpm, ghoul.claw_cpm_possible, "Claw")}
+      {ghoul.num_claws > 0 ? (
+        <div>
+          <div>{Info} Ghoul Claws: {ghoul.num_claws}</div>
+          <div>{Info} Ghoul Sweeping Claws: {ghoul.num_sweeping_claws}</div>
+        </div>
+      ) : (
+        booleanCheck(false, "Your Ghoul used Claw or Sweeping Claws", "Your Ghoul did NOT use Claw or Sweeping Claws")
+      )}
       {booleanCheck(ghoul.num_gnaws === 0, "You did not use Gnaw", `You used Gnaw ${ghoul.num_gnaws} times`)}
     </div>
   )

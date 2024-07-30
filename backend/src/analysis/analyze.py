@@ -1,12 +1,14 @@
 from analysis.core_analysis import (
     CoreAnalysisConfig,
     DeadZoneAnalyzer,
+    TalentPreprocessor,
     BuffTracker,
     PetNameDetector,
 )
 from analysis.frost_analysis import (
     FrostAnalysisConfig,
 )
+import json
 from analysis.items import ItemPreprocessor, TrinketPreprocessor
 from analysis.unholy_analysis import UnholyAnalysisConfig
 from console_table import EventsTable, SHOULD_PRINT
@@ -49,7 +51,22 @@ class Analyzer:
         return None
 
     def _preprocess_events(self):
+        # boss_events = self._fight.events
+        # print(self._fight.events)
+        # with open('/home/ryan/Desktop/bosses.json', 'w') as f:
+        #     f.write('[\n')  # Start of JSON array
+        #     # for i, event in enumerate(boss_events):
+        #     for i, event in enumerate(boss_events):
+        #         if i > 50:
+        #             break
+        #         json.dump(event, f, indent=4)
+        #         if i < len(boss_events) - 1:
+        #             f.write(',\n')  # Add comma between objects, but not after the last one
+        #         else:
+        #             f.write('\n')
+        #     f.write(']')
         dead_zone_analyzer = self._get_dead_zone_analyzer()
+        talent_preprocessor = self._get_talent_preprocessor()
         buff_tracker = self._get_buff_tracker()
         source_id = self._fight.source.id
         pet_analyzer = PetNameDetector()
@@ -58,6 +75,7 @@ class Analyzer:
         for event in self._events:
             if event["sourceID"] == source_id or event["targetID"] == source_id:
                 dead_zone_analyzer.preprocess_event(event)
+                talent_preprocessor.preprocess_event(event)
                 buff_tracker.preprocess_event(event)
                 items.preprocess_event(event)
             pet_analyzer.preprocess_event(event)
@@ -65,6 +83,7 @@ class Analyzer:
         for event in self._events:
             dead_zone_analyzer.decorate_event(event)
             buff_tracker.decorate_event(event)
+            talent_preprocessor.decorate_event(event)
             pet_analyzer.decorate_event(event)
             items.decorate_event(event)
 
@@ -74,6 +93,11 @@ class Analyzer:
         if not hasattr(self, "_dead_zone_analyzer"):
             self._dead_zone_analyzer = DeadZoneAnalyzer(self._fight)
         return self._dead_zone_analyzer
+
+    def _get_talent_preprocessor(self):
+        if not hasattr(self, "_talent_preprocessor"):
+            self._talent_preprocessor = TalentPreprocessor(self._fight.get_combatant_info(self._fight.source.id))
+        return self._talent_preprocessor
 
     def _get_item_preprocessor(self):
         if not hasattr(self, "_item_preprocessor"):
@@ -90,38 +114,36 @@ class Analyzer:
 
             self._buff_tracker = BuffTracker(
                 {
-                    "Unbreakable Armor",
+                    "Pillar of Frost",
                     "Heroism",
                     "Bloodlust",
-                    "Speed",
+                    "Slayer",
+                    "Thrill of Victory",
+                    "Heartened",
+                    "Race Against Death",
+                    "Eye of Doom",
+                    "Typhoon",
+                    "Polarization",
+                    "King of Boars",
+                    "Fatality",
+                    "Golem's Strength",
                     "Rime",
-                    "Meteorite Whetstone",
-                    "Hyperspeed Acceleration",
-                    "Reflection of Torment",
-                    "Greatness",
+                    "Synapse Springs",
+                    "Sudden Doom",
                     "Killing Machine",
-                    "Grim Toll",
-                    "Indestructible",
-                    "Mark of Norgannon",
                     "Berserking",
                     "Blood Fury",
-                    "Black Magic",
                     "Swordguard Embroidery",
                     "Unholy Strength",
-                    "Skyflare Swiftness",
-                    "Edward's Insight",
-                    "Loatheb's Shadow",
+                    "Stolen Power",
+                    "Free Your Mind",
                     "Cinderglacier",
-                    "Mjolnir Runestone",
-                    "Implosion",  # Dark Matter
-                    "Comet's Trail",
-                    "Wrathstone",
-                    "Blood of the Old God",
-                    "Pyrite Infusion",
-                    "Fury of the Five Flights",
-                    "Desolation",
-                    "Unholy Force",  # Sigil
-                    "Unholy Might",  # T9 2p
+                    "Death Eater",  # T11 4pc
+                    "Smoldering Rune",  # T12 2pc
+                    "Runic Corruption",
+                    "Unholy Frenzy",
+                    "Flask of Titanic Strength",
+                    "Flask of Battle",
                     "Blood Presence",
                     "Unholy Presence",
                     "Frost Presence",
@@ -145,17 +167,7 @@ class Analyzer:
                         return "Frost"
                     if event["type"] == "cast" and event["ability"] in (
                         "Summon Gargoyle",
-                        "Ghoul Frenzy",
-                    ):
-                        return "Unholy"
-
-                # If the above doesn't work, then try with less determinate spells
-                for event in self._events:
-                    if event["type"] == "cast" and event["ability"] == "Obliterate":
-                        return "Frost"
-                    if (
-                        event["type"] == "cast"
-                        and event["ability"] == "Death and Decay"
+                        "Unholy Frenzy",
                     ):
                         return "Unholy"
 
@@ -221,11 +233,8 @@ class Analyzer:
                     event["type"] in ("removedebuff", "applydebuff", "refreshdebuff")
                     and event["ability"]
                     in (
-                        "Fungal Creep",
-                        "Web Spray",
-                        "Frost Blast",
-                        "Slag Pot",
-                        "Black Hole",
+                        "Dominion",
+                        "Magma",
                     )
                 )
             ):

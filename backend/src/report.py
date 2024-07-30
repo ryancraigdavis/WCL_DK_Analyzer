@@ -44,21 +44,25 @@ CRIT_EVENTS = {"CRIT", "BLOCKED_CRIT", "RESIST_PARTIAL_CRIT"}
 NO_RUNES = {"blood": 0, "frost": 0, "unholy": 0}
 
 SPELL_TRANSLATIONS = {
-    55775: "Swordguard Embroidery",
-    60229: "Greatness",
-    49909: "Icy Touch",
-    49921: "Plague Strike",
-    54758: "Hyperspeed Acceleration",
-    51425: "Obliterate",
-    55268: "Frost Strike",
-    51411: "Howling Blast",
-    49930: "Blood Strike",
-    57623: "Horn of Winter",
-    49895: "Death Coil",
-    49938: "Death and Decay",
+    75176: "Swordguard Embroidery",
+    45477: "Icy Touch",
+    45462: "Plague Strike",
+    77575: "Outbreak",
+    96229: "Synapse Springs",
+    49020: "Obliterate",
+    49143: "Frost Strike",
+    49184: "Howling Blast",
+    45902: "Blood Strike",
+    57330: "Horn of Winter",
+    47541: "Death Coil",
+    43265: "Death and Decay",
     56815: "Rune Strike",
-    49941: "Blood Boil",
-    63560: "Ghoul Frenzy",
+    55090: "Scourge Strike",
+    85948: "Festering Strike",
+    81340: "Sudden Doom",
+    48707: "Anti-Magic Shell",
+    42005: "Blood Boil",
+    63560: "Dark Transformation",
 }
 
 
@@ -175,7 +179,7 @@ class Report:
         if ability_id == 50842:
             return "Pestilence"
         if ability_id == 51271:
-            return "Unbreakable Armor"
+            return "Pillar of Frost"
         if ability_id in (48266, 48263, 50475):
             return "Blood Presence"
         if ability_id in (48265, 49772):
@@ -190,22 +194,18 @@ class Report:
                 return "Mighty Strength"
             if ability_id == 48470:
                 return "Gift of the Wild"
-            if ability_id == 53760:
-                return "Flask of Endless Rage"
-            if ability_id == 53758:
-                return "Flask of Stoneblood"
-            if ability_id == 25898:
-                return "Greater Blessing of Kings"
-            if ability_id in (57371, 57399, 57079, 65414, 57111, 57356, 57294):
+            if ability_id == 79472:
+                return "Flask of Titanic Strength"
+            if ability_id == 92679:
+                return "Flask of Battle"
+            if ability_id == 20217:
+                return "Blessing of Kings"
+            if ability_id == 87545:
                 return "Well Fed"
-            if ability_id == 24383:
-                return "Swiftness of Zanza"
             if ability_id in (28878, 6562):
                 return "Heroic Presence"
             if ability_id in (393387, 24932):
                 return "Leader of the Pack"
-            if ability_id == 53762:
-                return "Indestructible"
             logging.warning(f"No ability name found for id: {ability_id}")
             return "Unknown"
 
@@ -224,7 +224,7 @@ class Report:
             return "https://wow.zamimg.com/images/wow/icons/large/inv_inscription_tarotgreatness.jpg"
         if ability_id == 63560:
             return (
-                "https://wow.zamimg.com/images/wow/icons/large/ability_ghoulfrenzy.jpg"
+                "https://wow.zamimg.com/images/wow/icons/large/achievement_boss_festergutrotface.jpg"
             )
 
         for ability in self._abilities:
@@ -233,15 +233,15 @@ class Report:
                     f'https://wow.zamimg.com/images/wow/icons/large/{ability["icon"]}'
                 )
         else:
-            if ability_id == 53748:
+            if ability_id == 79634:
                 return (
-                    "https://wow.zamimg.com/images/wow/icons/large/inv_potion_165.jpg"
+                    "https://wow.zamimg.com/images/wow/icons/large/inv_potiond_1.jpg"
                 )
             if ability_id == 48470:
                 return "https://wow.zamimg.com/images/wow/icons/large/spell_nature_giftofthewild.jpg"
-            if ability_id == 53760:
-                return "https://wow.zamimg.com/images/wow/icons/large/inv_alchemy_endlessflask_06.jpg"
-            if ability_id == 53758:
+            if ability_id == 79472:
+                return "https://wow.zamimg.com/images/wow/icons/large/inv_potione_6.jpg"
+            if ability_id == 92679:
                 return "https://wow.zamimg.com/images/wow/icons/large/inv_alchemy_endlessflask_05.jpg"
             if ability_id == 25898:
                 return "https://wow.zamimg.com/images/wow/icons/large/spell_magic_greaterblessingofkings.jpg"

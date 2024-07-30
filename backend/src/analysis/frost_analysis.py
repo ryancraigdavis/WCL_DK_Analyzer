@@ -5,7 +5,7 @@ from analysis.core_analysis import (
     CoreAnalysisConfig,
     DiseaseAnalyzer,
     GCDAnalyzer,
-    HyperspeedAnalyzer,
+    SynapseSpringsAnalyzer,
     MeleeUptimeAnalyzer,
     RuneTracker,
     TrinketAnalyzer,
@@ -426,7 +426,7 @@ class FrostAnalysisScorer(AnalysisScorer):
             BombAnalyzer: {
                 "weight": 2,
             },
-            HyperspeedAnalyzer: {
+            SynapseSpringsAnalyzer: {
                 "weight": 1,
             },
             TrinketAnalyzer: {
@@ -462,6 +462,7 @@ class FrostAnalysisConfig(CoreAnalysisConfig):
 
     def create_rune_tracker(self):
         return RuneTracker(
-            should_convert_blood=True,
+            should_convert_blood=False,
+            should_convert_frost=False,
             track_drift_type={"Frost", "Unholy"},
         )
