@@ -139,7 +139,7 @@ function getFrameURL(params) {
   if (window.chrome && localIDs.includes(window.chrome.runtime.id)) {
     return `http://localhost:5173?${new URLSearchParams(params)}`
   }
-  return `https://d2krnvrnlw0zwg.cloudfront.net/?${new URLSearchParams(params)}`
+  return `https://d4a6eolggrfst.cloudfront.net/?${new URLSearchParams(params)}`
 }
 
 function addAnalyzeButton() {
