@@ -1173,7 +1173,7 @@ class CoreAbilities(BaseAnalyzer):
 
 class MeleeUptimeAnalyzer(BaseAnalyzer):
     def __init__(
-        self, fight_duration, ignore_windows, max_swing_speed=2500, event_predicate=None
+        self, fight_duration, ignore_windows, max_swing_speed=3800, event_predicate=None
     ):
         self._fight_duration = fight_duration
         self._windows = []
