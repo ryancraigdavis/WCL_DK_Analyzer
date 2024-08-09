@@ -29,7 +29,8 @@ else
   echo "Lambda function already exists. Updating code..."
   aws lambda update-function-code \
     --function-name "$WCL_FUNCTION_NAME" \
-    --code "S3Bucket=wcl-analyzer-lambda-code,S3Key=function.zip"
+    --s3-bucket "wcl-analyzer-lambda-code" \
+    --s3-key "function.zip"
 
   echo "Waiting for function to update..."
   aws lambda wait function-updated \
