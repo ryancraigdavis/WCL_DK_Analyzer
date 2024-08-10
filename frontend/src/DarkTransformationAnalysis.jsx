@@ -22,6 +22,13 @@ export const DarkTransformationAnalysis = ({ dark_transformation }) => {
                   {Info}
                   <span>Damage: {hl(window.damage.toLocaleString())} ({hl(numAttacks)} attacks)</span>
                 </div>
+                <div>
+                  {Info}
+                  <span>Damage per Attack: {hl((window.damage / numAttacks).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  }))}</span>
+                </div>
                 {window.trinket_uptimes
                   .filter(uptime => uptime.uptime !== 0)
                   .map((uptime, i) => {
@@ -59,11 +66,6 @@ export const DarkTransformationAnalysis = ({ dark_transformation }) => {
                 {window.berserking_uptime !== null && window.berserking_uptime !== 0 && (
                   <div>
                     {formatUpTime(window.berserking_uptime, "Berserking (Troll)")}
-                  </div>
-                )}
-                {window.bloodfury_uptime !== null && window.bloodfury_uptime !== 0 && (
-                  <div>
-                    {formatUpTime(window.bloodfury_uptime, "Blood Fury (Orc)")}
                   </div>
                 )}
               </div>
