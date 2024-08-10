@@ -124,31 +124,7 @@ const Summary = () => {
       </div>
     );
   }, []);
-  {/*const formatRuneDrift = useCallback((runeDrift, infoOnly) => {
-    const runeDriftMs = runeDrift.rune_drift_ms;
 
-    let color = "green";
-
-    if (infoOnly) {
-      color = "hl"
-    } else if (runeDriftMs > 10000) {
-      color = "red";
-    } else if (runeDriftMs > 5000) {
-      color = "yellow";
-    }
-
-    const runeDriftSeconds = runeDriftMs / 1000;
-
-    return (
-      <div className={"rune-drift"}>
-        <i className="fa fa-clock-o hl" aria-hidden="true"></i>
-        You drifted runes by a total of{" "}
-        <span className={color}>{runeDriftSeconds.toFixed(2)} seconds</span>
-      </div>
-    );
-  }, []);
-
-*/}
   const formatKillingMachine = useCallback((killingMachine) => {
     const averageLatency = killingMachine.avg_latency;
     const averageLatencySeconds = averageLatency / 1000;
@@ -347,7 +323,7 @@ const Summary = () => {
     {/*<h3>Summary Data</h3>
           <pre>{JSON.stringify(summary, null, 2)}</pre>*/}
         </div>
-      
+
       <div className={"fight-summary"}>
         <h2>{fight.source}</h2>
         <div className={"summary-line"}>
@@ -375,7 +351,6 @@ const Summary = () => {
             <div className="analysis-section fight-analysis">
               <h3>Speed</h3>
               {formatGCDLatency(summary.gcd_latency, isUnholy)}
-            {/*{formatRuneDrift(summary.rune_drift, isUnholy)}*/}
               {summary.killing_machine && formatKillingMachine(summary.killing_machine)}
             </div>
           )
@@ -384,7 +359,6 @@ const Summary = () => {
 
           <h3>Speed</h3>
           {formatGCDLatency(summary.gcd_latency, isUnholy)}
-          {/*{formatRuneDrift(summary.rune_drift, isUnholy)}*/}
           <h3>Rotation</h3>
           {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
           {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
@@ -559,24 +533,6 @@ export const Analysis = () => {
       }
     });
 
-    const formatRuneDrift = (rune_grace_wasted) => {
-      if (!rune_grace_wasted || rune_grace_wasted === 0) {
-        return null;
-      }
-
-      let color = "yellow";
-      if (rune_grace_wasted > 1500) {
-        color = "red";
-      } else if (rune_grace_wasted > 1000) {
-        color = "orange";
-      }
-      return (
-        <span className={color}>
-          +{formatTimestamp(rune_grace_wasted, false)}
-        </span>
-      );
-    };
-
     return (
       <tr className={rowClass} key={i}>
         <td className={"timestamp"}>{timestamp}</td>
@@ -601,7 +557,6 @@ export const Analysis = () => {
                 <div className={"runes"}>{event.runes.map(formatRune)}</div>
               )}
             </td>
-            <td>{formatRuneDrift(event.rune_grace_wasted)}</td>
           </>
         ) : null}
         <td>
@@ -659,7 +614,6 @@ export const Analysis = () => {
               {summary.has_rune_spend_error ? null : (
                 <>
                   <th>Runes</th>
-                  <th>Rune Drift</th>
                 </>
               )}
               <th>Buffs</th>

@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import List
+
 # import os
 import json
 
@@ -23,6 +24,7 @@ from analysis.core_analysis import (
     BuffUptimeAnalyzer,
     T11UptimeAnalyzer,
     T12UptimeAnalyzer,
+    RuneHasteTracker,
 )
 from analysis.items import ItemPreprocessor
 from report import Fight
@@ -122,7 +124,7 @@ class DarkTransformationUptimeAnalyzer(BuffUptimeAnalyzer):
 
     @property
     def max_uptime(self):
-        return .7
+        return 0.7
 
     def score(self):
         return min(1, self.uptime() / self.max_uptime)
@@ -132,6 +134,7 @@ class DarkTransformationUptimeAnalyzer(BuffUptimeAnalyzer):
             "dark_transformation_uptime": self.uptime(),
             "dark_transformation_max_uptime": self.max_uptime,
         }
+
 
 class DarkTransformationWindow(Window):
     def __init__(
@@ -146,74 +149,113 @@ class DarkTransformationWindow(Window):
         self.end = min(start + 30000, fight_duration)
         self._dark_transformation_first_attack = None
 
-        self._bl_uptime = BuffUptimeAnalyzer(
-            self.end, buff_tracker, ignore_windows, {"Bloodlust", "Heroism", "Time Warp"}, self.start
-        ) if buff_tracker.has_bl else None
-        self._synapse_springs_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Synapse Springs",
-            self.start,
-            max_duration=10000 - 25,
-        ) if buff_tracker.has_synapse_springs else None
-        self._crushing_weight_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Race Against Death",
-            self.start,
-            max_duration=15000 - 25,
-        ) if buff_tracker.has_crushing_weight else None
-        self._potion_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Golem's Strength",
-            self.start,
-            max_duration=25000 - 25,
-        ) if buff_tracker.has_potion else None
-        self._shrine_purifying_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Fatality",
-            self.start,
-            max_duration=20000 - 25,
-        ) if buff_tracker.has_fatality else None
-        self._unholy_frenzy_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Unholy Frenzy",
-            self.start,
-            max_duration=30000 - 25,
-        ) if buff_tracker.has_unholy_frenzy else None
-        self._berserking_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Berserking",
-            self.start,
-            max_duration=10000 - 25,
-        ) if buff_tracker.has_berserking else None
-        self._bloodfury_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Blood Fury",
-            self.start,
-            max_duration=15000 - 25,
-        ) if buff_tracker.has_bloodfury else None
-        self._fallen_crusader_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Unholy Strength",
-            self.start,
-            max_duration=15000 - 25,
-        ) if buff_tracker.has_fallen_crusader else None
-
+        self._bl_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                {"Bloodlust", "Heroism", "Time Warp"},
+                self.start,
+            )
+            if buff_tracker.has_bl
+            else None
+        )
+        self._synapse_springs_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Synapse Springs",
+                self.start,
+                max_duration=10000 - 25,
+            )
+            if buff_tracker.has_synapse_springs
+            else None
+        )
+        self._crushing_weight_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Race Against Death",
+                self.start,
+                max_duration=15000 - 25,
+            )
+            if buff_tracker.has_crushing_weight
+            else None
+        )
+        self._potion_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Golem's Strength",
+                self.start,
+                max_duration=25000 - 25,
+            )
+            if buff_tracker.has_potion
+            else None
+        )
+        self._shrine_purifying_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Fatality",
+                self.start,
+                max_duration=20000 - 25,
+            )
+            if buff_tracker.has_fatality
+            else None
+        )
+        self._unholy_frenzy_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Unholy Frenzy",
+                self.start,
+                max_duration=30000 - 25,
+            )
+            if buff_tracker.has_unholy_frenzy
+            else None
+        )
+        self._berserking_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Berserking",
+                self.start,
+                max_duration=10000 - 25,
+            )
+            if buff_tracker.has_berserking
+            else None
+        )
+        self._bloodfury_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Blood Fury",
+                self.start,
+                max_duration=15000 - 25,
+            )
+            if buff_tracker.has_bloodfury
+            else None
+        )
+        self._fallen_crusader_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Unholy Strength",
+                self.start,
+                max_duration=15000 - 25,
+            )
+            if buff_tracker.has_fallen_crusader
+            else None
+        )
 
         self._uptimes = []
         if self._berserking_uptime:
@@ -266,11 +308,17 @@ class DarkTransformationWindow(Window):
 
     @property
     def unholy_frenzy_uptime(self):
-        return self._unholy_frenzy_uptime.uptime() if self._unholy_frenzy_uptime else None
+        return (
+            self._unholy_frenzy_uptime.uptime() if self._unholy_frenzy_uptime else None
+        )
 
     @property
     def synapse_springs_uptime(self):
-        return self._synapse_springs_uptime.uptime() if self._synapse_springs_uptime else None
+        return (
+            self._synapse_springs_uptime.uptime()
+            if self._synapse_springs_uptime
+            else None
+        )
 
     @property
     def potion_uptime(self):
@@ -282,11 +330,19 @@ class DarkTransformationWindow(Window):
 
     @property
     def crushing_weight_uptime(self):
-        return self._crushing_weight_uptime.uptime() if self._crushing_weight_uptime else None
+        return (
+            self._crushing_weight_uptime.uptime()
+            if self._crushing_weight_uptime
+            else None
+        )
 
     @property
     def shrine_purifying_uptime(self):
-        return self._shrine_purifying_uptime.uptime() if self._shrine_purifying_uptime else None
+        return (
+            self._shrine_purifying_uptime.uptime()
+            if self._shrine_purifying_uptime
+            else None
+        )
 
     @property
     def berserking_uptime(self):
@@ -298,7 +354,11 @@ class DarkTransformationWindow(Window):
 
     @property
     def fallen_crusader_uptime(self):
-        return self._fallen_crusader_uptime.uptime() if self._fallen_crusader_uptime else None
+        return (
+            self._fallen_crusader_uptime.uptime()
+            if self._fallen_crusader_uptime
+            else None
+        )
 
     def _set_dark_transformation_first_attack(self, event):
         self._dark_transformation_first_attack = event["timestamp"]
@@ -318,13 +378,30 @@ class DarkTransformationWindow(Window):
             ScoreWeight(self.berserking_uptime or 0, self.berserking_uptime or 0),
             ScoreWeight(self.bloodfury_uptime or 0, self.bloodfury_uptime or 0),
             ScoreWeight(self.potion_uptime or 0, 3 if self.potion_uptime else 0),
-            ScoreWeight(self.synapse_springs_uptime or 0, 3 if self.synapse_springs_uptime else 0),
-            ScoreWeight(self.fallen_crusader_uptime or 0, 3 if self.fallen_crusader_uptime else 0),
-            ScoreWeight(self.unholy_frenzy_uptime or 0, 10 if self.unholy_frenzy_uptime else 0),
+            ScoreWeight(
+                self.synapse_springs_uptime or 0,
+                3 if self.synapse_springs_uptime else 0,
+            ),
+            ScoreWeight(
+                self.fallen_crusader_uptime or 0,
+                3 if self.fallen_crusader_uptime else 0,
+            ),
+            ScoreWeight(
+                self.unholy_frenzy_uptime or 0, 10 if self.unholy_frenzy_uptime else 0
+            ),
             ScoreWeight(self.bl_uptime or 0, 10 if self.bl_uptime else 0),
             ScoreWeight(
-                sum([t["uptime"].uptime() for t in self.trinket_uptimes if t["uptime"].uptime() > 0]) / 
-                (sum(1 for t in self.trinket_uptimes if t["uptime"].uptime() > 0) or 1),
+                sum(
+                    [
+                        t["uptime"].uptime()
+                        for t in self.trinket_uptimes
+                        if t["uptime"].uptime() > 0
+                    ]
+                )
+                / (
+                    sum(1 for t in self.trinket_uptimes if t["uptime"].uptime() > 0)
+                    or 1
+                ),
                 sum(2 for t in self.trinket_uptimes if t["uptime"].uptime() > 0),
             ),
         )
@@ -357,7 +434,6 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
         else:
             self._window = None
 
-
     @property
     def possible_dark_transformations(self):
         return max(1 + (self._fight_duration - 10000) // 40000, len(self.windows))
@@ -366,7 +442,8 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
         window_score = sum(window.score() for window in self.windows)
         return ScoreWeight.calculate(
             ScoreWeight(
-                window_score / self.possible_dark_transformations, 5 * self.possible_dark_transformations
+                window_score / self.possible_dark_transformations,
+                5 * self.possible_dark_transformations,
             ),
         )
 
@@ -433,7 +510,11 @@ class GargoyleWindow(Window):
         self.snapshotted_t11 = (
             buff_tracker.is_active("Death Eater", start) if items.has_t11_4p() else None
         )
-        self.snapshotted_bloodfury = buff_tracker.is_active("Blood Fury", start) if buff_tracker.has_bloodfury else None
+        self.snapshotted_bloodfury = (
+            buff_tracker.is_active("Blood Fury", start)
+            if buff_tracker.has_bloodfury
+            else None
+        )
 
         self.num_melees = 0
         self.num_casts = 0
@@ -463,7 +544,6 @@ class GargoyleWindow(Window):
         self._gargoyle_first_cast = event["timestamp"]
 
     def add_event(self, event):
-
         if event["source"] == "Ebon Gargoyle":
             if (
                 event["type"] in ("cast", "startcast")
@@ -496,7 +576,9 @@ class GargoyleWindow(Window):
                 2 if self.snapshotted_t11 is not None else 0,
             ),
             ScoreWeight(
-                int(self.snapshotted_bloodfury) if self.snapshotted_bloodfury is not None else 0,
+                int(self.snapshotted_bloodfury)
+                if self.snapshotted_bloodfury is not None
+                else 0,
                 2 if self.snapshotted_bloodfury is not None else 0,
             ),
         )
@@ -720,6 +802,8 @@ class GhoulAnalyzer(BaseAnalyzer):
                 "damage": self.total_damage,
             }
         }
+
+
 class ArmyAnalyzer(BaseAnalyzer):
     INCLUDE_PET_EVENTS = True
 
@@ -741,7 +825,7 @@ class ArmyAnalyzer(BaseAnalyzer):
         if self.total_damage >= 100000:
             return 1
         else:
-            return self.total_damage/100000
+            return self.total_damage / 100000
 
 
 class UnholyPresenceUptimeAnalyzer(BaseAnalyzer):
@@ -780,6 +864,7 @@ class SnapshottableBuff:
     def is_active(self, buff_tracker: BuffTracker, timestamp):
         return any(buff_tracker.is_active(buff, timestamp) for buff in self.buffs)
 
+
 class BloodTapAnalyzer(BaseAnalyzer):
     def __init__(self, fight_end_time):
         self._num_used = 0
@@ -788,7 +873,12 @@ class BloodTapAnalyzer(BaseAnalyzer):
 
     @property
     def max_usages(self):
-        return max(1 + (self._fight_end_time - (self._max_blood_tap_cooldown / 2)) // self._max_blood_tap_cooldown, self._num_used)
+        return max(
+            1
+            + (self._fight_end_time - (self._max_blood_tap_cooldown / 2))
+            // self._max_blood_tap_cooldown,
+            self._num_used,
+        )
 
     def add_event(self, event):
         self._max_blood_tap_cooldown = event["blood_tap_cooldown"]
@@ -804,6 +894,7 @@ class BloodTapAnalyzer(BaseAnalyzer):
             "blood_tap_max_usages": self.max_usages,
         }
 
+
 class AMSAnalyzer(BaseAnalyzer):
     def __init__(self, fight_end_time):
         self._num_used = 0
@@ -812,7 +903,9 @@ class AMSAnalyzer(BaseAnalyzer):
 
     @property
     def max_usages(self):
-        return max(1 + (self._fight_end_time - 10000) // self._ams_cooldown, self._num_used)
+        return max(
+            1 + (self._fight_end_time - 10000) // self._ams_cooldown, self._num_used
+        )
 
     def add_event(self, event):
         if event["type"] == "cast" and event["ability"] == "Anti-Magic Shield":
@@ -848,7 +941,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
             DarkTransformationUptimeAnalyzer: {
                 "weight": 10,
                 "exponent_factor": exponent_factor,
-                },
+            },
             DarkTransformationAnalyzer: {
                 "weight": 4,
                 "exponent_factor": exponent_factor,
@@ -907,19 +1000,21 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
     def get_analyzers(self, fight: Fight, buff_tracker, dead_zone_analyzer, items):
         dead_zones = dead_zone_analyzer.get_dead_zones()
         gargoyle = GargoyleAnalyzer(fight.duration, buff_tracker, dead_zones, items)
-        dark_transformation = DarkTransformationAnalyzer(fight.duration, buff_tracker, dead_zones, items)
+        dark_transformation = DarkTransformationAnalyzer(
+            fight.duration, buff_tracker, dead_zones, items
+        )
 
         return super().get_analyzers(fight, buff_tracker, dead_zone_analyzer, items) + [
-            DarkTransformationUptimeAnalyzer(fight.duration, buff_tracker, dead_zones, items),
+            DarkTransformationUptimeAnalyzer(
+                fight.duration, buff_tracker, dead_zones, items
+            ),
             gargoyle,
             dark_transformation,
             BloodPlagueAnalyzer(fight.duration, dead_zones),
             FrostFeverAnalyzer(fight.duration, dead_zones),
             DeathAndDecayUptimeAnalyzer(fight.duration, dead_zones, items),
             GhoulAnalyzer(fight.duration, dead_zones),
-            UnholyPresenceUptimeAnalyzer(
-                fight.duration, buff_tracker, dead_zones
-            ),
+            UnholyPresenceUptimeAnalyzer(fight.duration, buff_tracker, dead_zones),
             ArmyAnalyzer(),
             BloodTapAnalyzer(fight.end_time),
             # AMSAnalyzer(fight.end_time)
@@ -928,9 +1023,9 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
     def get_scorer(self, analyzers):
         return UnholyAnalysisScorer(analyzers)
 
-    def create_rune_tracker(self):
+    def create_rune_tracker(self, rune_haste_tracker):
         return RuneTracker(
             should_convert_blood=True,
             should_convert_frost=True,
-            track_drift_type={"Unholy"},
+            rune_haste_tracker=rune_haste_tracker,
         )

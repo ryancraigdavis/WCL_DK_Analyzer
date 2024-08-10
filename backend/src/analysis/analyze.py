@@ -4,6 +4,7 @@ from analysis.core_analysis import (
     TalentPreprocessor,
     BuffTracker,
     PetNameDetector,
+    RuneHasteTracker,
 )
 from analysis.frost_analysis import (
     FrostAnalysisConfig,
@@ -31,12 +32,14 @@ class Analyzer:
             self.SPEC_ANALYSIS_CONFIGS["Default"],
         )()
         self._buff_tracker = None
+        self._rune_haste_tracker = None
 
     def _get_valid_initial_rune_state(self):
         rune_death_states = [(False, False), (True, False), (False, True), (True, True)]
 
         for rune_death_state in rune_death_states:
-            runes = self._analysis_config.create_rune_tracker()
+            rune_haste_tacker = self._get_rune_haste_tracker()
+            runes = self._analysis_config.create_rune_tracker(rune_haste_tacker)
 
             for i, is_death in enumerate(rune_death_state):
                 runes.runes[i].is_death = is_death
@@ -96,7 +99,9 @@ class Analyzer:
 
     def _get_talent_preprocessor(self):
         if not hasattr(self, "_talent_preprocessor"):
-            self._talent_preprocessor = TalentPreprocessor(self._fight.get_combatant_info(self._fight.source.id))
+            self._talent_preprocessor = TalentPreprocessor(
+                self._fight.get_combatant_info(self._fight.source.id)
+            )
         return self._talent_preprocessor
 
     def _get_item_preprocessor(self):
@@ -105,6 +110,13 @@ class Analyzer:
                 self._fight.get_combatant_info(self._fight.source.id)
             )
         return self._item_preprocessor
+
+    def _get_rune_haste_tracker(self):
+        if self._rune_haste_tracker is None:
+            combatant_info = self._fight.get_combatant_info(self._fight.source.id)
+            buff_tracker = self._get_buff_tracker()
+            self._rune_haste_tracker = RuneHasteTracker(combatant_info, buff_tracker)
+        return self._rune_haste_tracker
 
     def _get_buff_tracker(self):
         if self._buff_tracker is None:
@@ -244,7 +256,8 @@ class Analyzer:
     def analyze(self):
         self._preprocess_events()
 
-        runes = self._analysis_config.create_rune_tracker()
+        rune_haste_tacker = self._get_rune_haste_tracker()
+        runes = self._analysis_config.create_rune_tracker(rune_haste_tacker)
         initial_rune_state = self._get_valid_initial_rune_state()
         if initial_rune_state:
             for i, is_death in enumerate(initial_rune_state):
@@ -252,6 +265,7 @@ class Analyzer:
             has_rune_error = False
         else:
             has_rune_error = True
+        # has_rune_error = False
 
         table = EventsTable()
 
