@@ -20,6 +20,7 @@ jobs:
         echo "PR_TITLE=$(jq --raw-output .pull_request.title $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
         echo "PR_BODY=$(jq --raw-output .pull_request.body $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
         echo "COMMIT_SHA=$(jq --raw-output .pull_request.merge_commit_sha $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
+        echo "PR_LINK=$(jq --raw-output .pull_request.html_url $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
 
     - name: Extract issue number and create issue link
       id: issue
@@ -46,3 +47,4 @@ jobs:
           Commit: ${{ steps.pr_details.outputs.COMMIT_SHA }}
           
           Issue Link: ${{ steps.issue.outputs.ISSUE_LINK }}
+          PR Link: ${{ steps.pr_details.outputs.PR_LINK }}
