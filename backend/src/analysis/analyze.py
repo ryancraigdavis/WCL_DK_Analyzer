@@ -117,6 +117,7 @@ class Analyzer:
                     "Pillar of Frost",
                     "Heroism",
                     "Bloodlust",
+                    "Time Warp",
                     "Slayer",
                     "Thrill of Victory",
                     "Heartened",
