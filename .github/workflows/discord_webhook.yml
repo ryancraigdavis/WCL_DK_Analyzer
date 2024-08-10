@@ -1,0 +1,48 @@
+name: Discord Notification for PR Merge
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  discord_notification:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Get PR details
+      id: pr_details
+      run: |
+        echo "PR_NUMBER=$(jq --raw-output .pull_request.number $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
+        echo "PR_TITLE=$(jq --raw-output .pull_request.title $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
+        echo "PR_BODY=$(jq --raw-output .pull_request.body $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
+        echo "COMMIT_SHA=$(jq --raw-output .pull_request.merge_commit_sha $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
+
+    - name: Extract issue number and create issue link
+      id: issue
+      run: |
+        ISSUE_NUMBER=$(echo "${{ steps.pr_details.outputs.PR_BODY }}" | grep -oP '#\K\d+' | head -n 1)
+        if [ -n "$ISSUE_NUMBER" ]; then
+          ISSUE_LINK="https://github.com/${{ github.repository }}/issues/${ISSUE_NUMBER}"
+        else
+          ISSUE_LINK="No linked issue found"
+        fi
+        echo "ISSUE_NUMBER=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
+        echo "ISSUE_LINK=${ISSUE_LINK}" >> $GITHUB_OUTPUT
+
+    - name: Discord Webhook Notification
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.EBONHOLD_DISCORD_UPDATES_WEBHOOK }}
+      uses: Ilshidur/action-discord@master
+      with:
+        args: |
+          A pull request has been approved and merged into the main branch of WCL_DK_Analyzer!
+          
+          PR #${{ steps.pr_details.outputs.PR_NUMBER }}: ${{ steps.pr_details.outputs.PR_TITLE }}
+          Related Issue: #${{ steps.issue.outputs.ISSUE_NUMBER }}
+          Commit: ${{ steps.pr_details.outputs.COMMIT_SHA }}
+          
+          Issue Link: ${{ steps.issue.outputs.ISSUE_LINK }}
