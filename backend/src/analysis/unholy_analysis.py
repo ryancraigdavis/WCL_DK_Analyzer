@@ -197,14 +197,6 @@ class DarkTransformationWindow(Window):
             self.start,
             max_duration=10000 - 25,
         ) if buff_tracker.has_berserking else None
-        self._bloodfury_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Blood Fury",
-            self.start,
-            max_duration=15000 - 25,
-        ) if buff_tracker.has_bloodfury else None
         self._fallen_crusader_uptime = BuffUptimeAnalyzer(
             self.end,
             buff_tracker,
@@ -218,8 +210,6 @@ class DarkTransformationWindow(Window):
         self._uptimes = []
         if self._berserking_uptime:
             self._uptimes.append(self._berserking_uptime)
-        if self._bloodfury_uptime:
-            self._uptimes.append(self._bloodfury_uptime)
         if self._synapse_springs_uptime:
             self._uptimes.append(self._synapse_springs_uptime)
         if self._potion_uptime:
@@ -293,10 +283,6 @@ class DarkTransformationWindow(Window):
         return self._berserking_uptime.uptime() if self._berserking_uptime else None
 
     @property
-    def bloodfury_uptime(self):
-        return self._bloodfury_uptime.uptime() if self._bloodfury_uptime else None
-
-    @property
     def fallen_crusader_uptime(self):
         return self._fallen_crusader_uptime.uptime() if self._fallen_crusader_uptime else None
 
@@ -316,7 +302,6 @@ class DarkTransformationWindow(Window):
     def score(self):
         dark_transformation_score = ScoreWeight.calculate(
             ScoreWeight(self.berserking_uptime or 0, self.berserking_uptime or 0),
-            ScoreWeight(self.bloodfury_uptime or 0, self.bloodfury_uptime or 0),
             ScoreWeight(self.potion_uptime or 0, 3 if self.potion_uptime else 0),
             ScoreWeight(self.synapse_springs_uptime or 0, 3 if self.synapse_springs_uptime else 0),
             ScoreWeight(self.fallen_crusader_uptime or 0, 3 if self.fallen_crusader_uptime else 0),
@@ -396,7 +381,6 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
                         "potion_uptime": window.potion_uptime,
                         "unholy_frenzy_uptime": window.unholy_frenzy_uptime,
                         "berserking_uptime": window.berserking_uptime,
-                        "bloodfury_uptime": window.bloodfury_uptime,
                         "fallen_crusader_uptime": window.fallen_crusader_uptime,
                         "start": window.start,
                         "end": window.end,
