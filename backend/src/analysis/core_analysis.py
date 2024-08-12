@@ -618,26 +618,24 @@ class RuneTracker(BaseAnalyzer):
             runes_needed = defaultdict(int)
             current_runes = self.current_runes(event["timestamp"])
 
-            total_missing = sum(
-                max(0, num - current_runes[rune_type])
-                for rune_type, num in event["rune_cost"].items()
-            )
-            total_missing -= current_runes["Death"]
+            total_missing = 0
+            for rune_type, num_needed in event["rune_cost"].items():
+                missing = max(
+                    0, num_needed - current_runes[rune_type] - current_runes["Death"]
+                )
+                total_missing += missing
+
+                # respawn the oldest rune if we need it
+                for rune in self._sorted_runes(self.runes):
+                    if (
+                        missing > 0
+                        and not rune.can_spend(event["timestamp"])
+                        and (rune.type == rune_type or rune.is_death)
+                    ):
+                        missing -= 1
+                        runes_needed[rune_type] += 1
 
             if total_missing > 0:
-                for rune_type, num_needed in event["rune_cost"].items():
-                    delta = max(0, num_needed - current_runes[rune_type])
-
-                    # respawn the oldest rune if we need it
-                    for rune in self._sorted_runes(self.runes):
-                        if (
-                            delta > 0
-                            and not rune.can_spend(event["timestamp"])
-                            and (rune.type == rune_type or rune.is_death)
-                        ):
-                            delta -= 1
-                            runes_needed[rune_type] += 1
-
                 # Sync runes to what we think they should be
                 self.resync_runes(event["timestamp"], event["rune_cost"], runes_needed)
                 event["rune_spend_adjustment"] = True
