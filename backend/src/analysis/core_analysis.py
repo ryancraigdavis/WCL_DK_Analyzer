@@ -492,12 +492,12 @@ class RuneTracker(BaseAnalyzer):
 
             return refreshed == num
 
-        total_cost = rune_cost["blood"] + rune_cost["frost"] + rune_cost["unholy"]
-        total_used = runes_used["blood"] + runes_used["frost"] + runes_used["unholy"]
+        total_cost = rune_cost["Blood"] + rune_cost["Frost"] + rune_cost["Unholy"]
+        total_used = runes_used["Blood"] + runes_used["Frost"] + runes_used["Unholy"]
 
-        _resync_runes(self.runes[0:2], runes_used["blood"])
-        _resync_runes(self.runes[2:4], runes_used["frost"])
-        _resync_runes(self.runes[4:6], runes_used["unholy"])
+        _resync_runes(self.runes[0:2], runes_used["Blood"])
+        _resync_runes(self.runes[2:4], runes_used["Frost"])
+        _resync_runes(self.runes[4:6], runes_used["Unholy"])
         _resync_runes(self.current_death_runes, total_cost - total_used)
 
     def _spend_runes(self, num, runes, timestamp, death_rune_slots, convert=False):
@@ -603,10 +603,10 @@ class RuneTracker(BaseAnalyzer):
                     else 0)
 
         return {
-            "blood": sum(_count_rune(i) for i in range(0, 2)),
-            "frost": sum(_count_rune(i) for i in range(2, 4)),
-            "unholy": sum(_count_rune(i) for i in range(4, 6)),
-            "death": sum(1 for rune in self.current_death_runes if rune.can_spend(timestamp)),
+            "Blood": sum(_count_rune(i) for i in range(0, 2)),
+            "Frost": sum(_count_rune(i) for i in range(2, 4)),
+            "Unholy": sum(_count_rune(i) for i in range(4, 6)),
+            "Death": sum(1 for rune in self.current_death_runes if rune.can_spend(timestamp)),
         }
 
     def add_event(self, event):
@@ -618,11 +618,11 @@ class RuneTracker(BaseAnalyzer):
                 max(0, num - current_runes[rune_type])
                 for rune_type, num in event["rune_cost"].items()
             )
-            total_missing -= current_runes["death"]
+            total_missing -= current_runes["Death"]
 
             if total_missing > 0:
                 for rune_type, num_needed in event["rune_cost"].items():
-                    delta = num_needed - current_runes[rune_type]
+                    delta = max(0, num_needed - current_runes[rune_type])
 
                     # respawn the oldest rune if we need it
                     for rune in self._sorted_runes(self.runes):
@@ -633,10 +633,10 @@ class RuneTracker(BaseAnalyzer):
                         ):
                             delta -= 1
                             runes_needed[rune_type] += 1
-                event["rune_spend_adjustment"] = True
 
-            # Sync runes to what we think they should be
-            self.resync_runes(event["timestamp"], event["rune_cost"], runes_needed)
+                # Sync runes to what we think they should be
+                self.resync_runes(event["timestamp"], event["rune_cost"], runes_needed)
+                event["rune_spend_adjustment"] = True
 
         event["runes_before"] = self._serialize(event["timestamp"])
 
@@ -645,7 +645,9 @@ class RuneTracker(BaseAnalyzer):
                 spent = self.spend(
                     event["ability"],
                     event["timestamp"],
-                    **event["rune_cost"],
+                    blood=event["rune_cost"]["Blood"],
+                    frost=event["rune_cost"]["Frost"],
+                    unholy=event["rune_cost"]["Unholy"],
                 )
                 event["rune_spend_error"] = not spent
 

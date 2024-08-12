@@ -41,7 +41,7 @@ HIT_TYPES = {
 MISS_EVENTS = {"MISS", "DODGE", "PARRY", "IMMUNE", "REFLECT", "EVADE", "RESIST_FULL"}
 CRIT_EVENTS = {"CRIT", "BLOCKED_CRIT", "RESIST_PARTIAL_CRIT"}
 
-NO_RUNES = {"blood": 0, "frost": 0, "unholy": 0}
+NO_RUNES = {"Blood": 0, "Frost": 0, "Unholy": 0}
 
 SPELL_TRANSLATIONS = {
     75176: "Swordguard Embroidery",
@@ -587,18 +587,18 @@ class Fight:
                     if resource.get("cost"):
                         normalized_event["runic_power_cost"] = resource["cost"]
                 if resource["type"] == 20:
-                    normalized_event["rune_cost"]["blood"] += resource["cost"]
-                    normalized_event["runes_used"]["blood"] += min(
+                    normalized_event["rune_cost"]["Blood"] += resource["cost"]
+                    normalized_event["runes_used"]["Blood"] += min(
                         resource["amount"], resource["cost"]
                     )
                 if resource["type"] == rune_resource_types["frost"]:
-                    normalized_event["rune_cost"]["frost"] += resource["cost"]
-                    normalized_event["runes_used"]["frost"] += min(
+                    normalized_event["rune_cost"]["Frost"] += resource["cost"]
+                    normalized_event["runes_used"]["Frost"] += min(
                         resource["amount"], resource["cost"]
                     )
                 if resource["type"] == rune_resource_types["unholy"]:
-                    normalized_event["rune_cost"]["unholy"] += resource["cost"]
-                    normalized_event["runes_used"]["unholy"] += min(
+                    normalized_event["rune_cost"]["Unholy"] += resource["cost"]
+                    normalized_event["runes_used"]["Unholy"] += min(
                         resource["amount"], resource["cost"]
                     )
             if normalized_event.get("rune_cost") == NO_RUNES:
