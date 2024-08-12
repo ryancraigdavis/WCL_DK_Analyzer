@@ -460,7 +460,7 @@ class FrostAnalysisConfig(CoreAnalysisConfig):
     def get_scorer(self, analyzers):
         return FrostAnalysisScorer(analyzers)
 
-    def create_rune_tracker(self, haste_tracker):
+    def create_rune_tracker(self):
         return RuneTracker(
             should_convert_blood=False,
             should_convert_frost=False,

@@ -121,8 +121,6 @@ class DeadZoneAnalyzer(BasePreprocessor):
             self._last_event = event
         if event["ability"] == "Free Your Mind" and self._last_event:
             dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
-            # print(f"Deadzone Start: {self._last_event['timestamp']}")
-            # print(f"Deadzone End: {event['timestamp']}")
             self._dead_zones.append(dead_zone)
             self._last_event = None
 
@@ -282,16 +280,10 @@ class DeadZoneAnalyzer(BasePreprocessor):
 
 
 class Rune:
-    # Add lag time to rune regen time to account for the time it takes to
-    # for the client to acknowledge rune has regenerated.
-    # This can be seen in-game by logging the rune cooldown when a spell is cast
-    # vs. when the actual rune CD event is received.
-    RUNE_NETWORK_LAG = 75
-
     def __init__(self, full_name, type):
         self.full_name = full_name
         self.type = type
-        self.regen_time = None
+        self.regen_time = 0
         # Flag for death rune (when converted normally)
         self.is_death = False
         # Blood Tap is tracked as separate attribute since a blood-tapped
@@ -299,11 +291,10 @@ class Rune:
         # like a normal death rune does
         self.blood_tapped = False
         self._regen_speed = 1
+        self.rune_cd = 10000
         self._linked_rune = None
 
     def can_spend(self, timestamp: int):
-        if self.regen_time is None:
-            return True
         return timestamp >= self.regen_time
 
     def can_spend_death(self, timestamp: int):
@@ -321,9 +312,8 @@ class Rune:
         if not self.can_spend(timestamp):
             return False, 0
 
-        self.regen_time = (
-            timestamp + (10000 * self._regen_speed) + self.RUNE_NETWORK_LAG
-        )
+        self.regen_time = timestamp + self.rune_cd
+
         if not self._linked_rune.can_spend(timestamp):
             # calculate how long until the linked rune is available
             time_until_linked_rune = self._linked_rune.regen_time - timestamp
@@ -363,42 +353,25 @@ class Rune:
         return self.type
 
     def time_since_regen(self, timestamp):
-        if self.regen_time is None:
+        if self.regen_time == 0:
             return 0
         return max(0, timestamp - self.regen_time)
 
     def set_regen_speed(self, timestamp, speed):
         current_speed = self._regen_speed
         self._regen_speed = speed
+        self.rune_cd = 10000 * speed
 
-        if current_speed != speed:
-            # Recalculate the regen time
-            if self.regen_time is not None:
-                self.regen_time = (
-                    timestamp + (self.regen_time - timestamp) * speed / current_speed
-                )
+        if current_speed != speed and self.regen_time > timestamp:
+            self.regen_time = (
+                timestamp + (self.regen_time - timestamp) * speed / current_speed
+            )
 
     def set_linked_rune(self, rune):
         self._linked_rune = rune
 
 
-class EventListener:
-    def __init__(self, event_name):
-        self.event_name = event_name
-        self._listeners = []
-
-    def publish_event(self, *args):
-        for listener in self._listeners:
-            listener(*args)
-
-    def subscribe(self, callback):
-        self._listeners.append(callback)
-
-
-RUNE_SPEED_CHANGED_EVENT = EventListener("RuneSpeedChanged")
-
-
-class RuneHasteTracker:
+class RuneHasteTracker(BaseAnalyzer):
     HASTE_RATING_PROCS = {
         # Shrine-Cleansing Purifier
         91355: 1314,
@@ -408,27 +381,33 @@ class RuneHasteTracker:
         92342: 2178,
     }
     HASTE_PERCENT_PROCS = {
-        "Unholy Frenzy": 0.2,
-        "Runic Corruption": 1,
-        "Bloodlust": 0.3,
-        "Heroism": 0.3,
-        "Time Warp": 0.3,
-        "Primal Rage": 0.3,
-        "Unholy Presence": 0.15,
+        "Unholy Frenzy": 1.2,
+        "Runic Corruption": 2,
+        "Bloodlust": 1.3,
+        "Heroism": 1.3,
+        "Time Warp": 1.3,
+        "Primal Rage": 1.3,
+        "Unholy Presence": 1.15,
+        "Berserking": 1.2,
     }
 
-    def __init__(self, combatant_info, buff_tracker):
+    def __init__(self, combatant_info, buff_tracker, rune_tracker):
         self._initial_haste_rating = combatant_info["hasteMelee"]
         self._current_haste_rating = combatant_info["hasteMelee"]
-        # Assume 10% haste from the start from Improved Icy Talons / Windfury / Hunting Party
-        # Can't seem to detect this in the logs
-        self._current_haste_percent = 0.1
+        self._current_haste_percent = 1.0
+        self._rune_tracker = rune_tracker
 
         for haste_percent_proc in self.HASTE_PERCENT_PROCS:
             if buff_tracker.has_buff(haste_percent_proc):
-                self._current_haste_percent += self.HASTE_PERCENT_PROCS[
+                self._current_haste_percent *= self.HASTE_PERCENT_PROCS[
                     haste_percent_proc
                 ]
+
+        self._modify_haste(
+            0,
+            self._current_haste_rating,
+            self._current_haste_percent,
+        )
 
     def add_event(self, event):
         new_haste_rating = self._current_haste_rating
@@ -448,12 +427,12 @@ class RuneHasteTracker:
             event["type"] == "applybuff"
             and event["ability"] in self.HASTE_PERCENT_PROCS
         ):
-            new_haste_percent += self.HASTE_PERCENT_PROCS[event["ability"]]
+            new_haste_percent *= self.HASTE_PERCENT_PROCS[event["ability"]]
         if (
             event["type"] == "removebuff"
             and event["ability"] in self.HASTE_PERCENT_PROCS
         ):
-            new_haste_percent -= self.HASTE_PERCENT_PROCS[event["ability"]]
+            new_haste_percent /= self.HASTE_PERCENT_PROCS[event["ability"]]
 
         if (
             new_haste_rating != self._current_haste_rating
@@ -466,15 +445,14 @@ class RuneHasteTracker:
         self._current_haste_percent = haste_percent
 
         haste_from_rating = 1 + haste_rating / 12805.7160
-        haste_from_percent = 1 + haste_percent
-        haste = haste_from_rating * haste_from_percent
+        haste = haste_from_rating * haste_percent
         rune_speed = 1 / haste
 
-        RUNE_SPEED_CHANGED_EVENT.publish_event(timestamp, rune_speed)
+        self._rune_tracker.update_regen_speed(timestamp, rune_speed)
 
 
 class RuneTracker(BaseAnalyzer):
-    def __init__(self, should_convert_blood, should_convert_frost, rune_haste_tracker):
+    def __init__(self, should_convert_blood, should_convert_frost):
         self.runes = [
             Rune("Blood1", "Blood"),
             Rune("Blood2", "Blood"),
@@ -491,9 +469,6 @@ class RuneTracker(BaseAnalyzer):
         self.rune_spend_error = False
         self._should_convert_blood = should_convert_blood
         self._should_convert_frost = should_convert_frost
-        self._rune_haste_tracker = rune_haste_tracker
-
-        RUNE_SPEED_CHANGED_EVENT.subscribe(self._update_regen_speed)
 
     @property
     def current_death_runes(self):
@@ -527,7 +502,7 @@ class RuneTracker(BaseAnalyzer):
 
     def _spend_runes(self, num, runes, timestamp, death_rune_slots, convert=False):
         if not num:
-            return True, 0
+            return True
 
         spent = 0
 
@@ -622,25 +597,43 @@ class RuneTracker(BaseAnalyzer):
 
     def current_runes(self, timestamp):
         def _count_rune(i):
-            return 1 if self.runes[i].can_spend(timestamp) else 0
+            return (1 if
+                    self.runes[i].can_spend(timestamp)
+                    and not (self.runes[i].is_death or self.runes[i].blood_tapped)
+                    else 0)
 
         return {
             "blood": sum(_count_rune(i) for i in range(0, 2)),
             "frost": sum(_count_rune(i) for i in range(2, 4)),
             "unholy": sum(_count_rune(i) for i in range(4, 6)),
+            "death": sum(1 for rune in self.current_death_runes if rune.can_spend(timestamp)),
         }
 
     def add_event(self, event):
-        self._rune_haste_tracker.add_event(event)
-
         if event.get("rune_cost"):
-            # Bit of a hack to deal with the logs saying there's no rune
-            # but there actually is. So we only respawn a new rune if we actually need it
-            # http://localhost:5173/?fight=56&source=19&report=4ZtgQYvTyAmbMLDX
-            runes_needed = {}
-            for rune_type, num in self.current_runes(event["timestamp"]).items():
-                runes_used = event["runes_used"]
-                runes_needed[rune_type] = max(num, runes_used[rune_type])
+            runes_needed = defaultdict(int)
+            current_runes = self.current_runes(event["timestamp"])
+
+            total_missing = sum(
+                max(0, num - current_runes[rune_type])
+                for rune_type, num in event["rune_cost"].items()
+            )
+            total_missing -= current_runes["death"]
+
+            if total_missing > 0:
+                for rune_type, num_needed in event["rune_cost"].items():
+                    delta = num_needed - current_runes[rune_type]
+
+                    # respawn the oldest rune if we need it
+                    for rune in self._sorted_runes(self.runes):
+                        if (
+                            delta > 0
+                            and not rune.can_spend(event["timestamp"])
+                            and (rune.type == rune_type or rune.is_death)
+                        ):
+                            delta -= 1
+                            runes_needed[rune_type] += 1
+                event["rune_spend_adjustment"] = True
 
             # Sync runes to what we think they should be
             self.resync_runes(event["timestamp"], event["rune_cost"], runes_needed)
@@ -667,9 +660,31 @@ class RuneTracker(BaseAnalyzer):
 
         event["runes"] = self._serialize(event["timestamp"])
 
-    def _update_regen_speed(self, timestamp, rune_speed):
-        for rune in self.runes:
-            rune.set_regen_speed(timestamp, rune_speed)
+    def update_regen_speed(self, timestamp, rune_speed):
+        """
+        1. identify rune that will come off CD first
+        2. update rune regen time based on new speed
+        3. update linked rune regen time based on new speed and time until first rune is available
+        """
+        for i in range(0, 6, 2):
+            rune_a, rune_b = self.runes[i], self.runes[i + 1]
+
+            # "first" is the rune that will come off CD first
+            if rune_a.regen_time < rune_b.regen_time:
+                first, second = rune_a, rune_b
+            else:
+                first, second = rune_b, rune_a
+
+            # remove the current "wait time"
+            if first.regen_time > timestamp:
+                second.regen_time -= first.rune_cd
+
+            first.set_regen_speed(timestamp, rune_speed)
+            second.set_regen_speed(timestamp, rune_speed)
+
+            # add the new "wait time" until the second rune can start regen
+            if first.regen_time > timestamp:
+                second.regen_time += first.rune_cd
 
     def _serialize(self, timestamp):
         return [
@@ -680,6 +695,37 @@ class RuneTracker(BaseAnalyzer):
             }
             for rune in self.runes
         ]
+
+
+class PrepullArmyOfTheDeadTracker(BasePreprocessor):
+    # Ghouls last 40 seconds after they are target-able, assume 1s to target
+    ARMY_DURATION_MS = 42000
+
+    def __init__(self, rune_tracker: RuneTracker):
+        self._rune_tracker = rune_tracker
+        self._deaths = {}
+        self._runes_modified = False
+
+    def preprocess_event(self, event):
+        if self._runes_modified or event["timestamp"] > self.ARMY_DURATION_MS:
+            return
+
+        if event.get("source") == "Army of the Dead":
+            self._deaths[event["sourceInstance"]] = event["source_dies_at"]
+
+        if len(self._deaths) == 8:
+            self._modify_runes()
+
+    def _modify_runes(self):
+        # get the max death time
+        max_death_time = max(self._deaths.values())
+        cast_at = max_death_time - self.ARMY_DURATION_MS - 500
+        rune_cd = self._rune_tracker.runes[0].rune_cd
+
+        for i in range(0, 6, 2):
+            self._rune_tracker.runes[i].regen_time = cast_at + rune_cd
+
+        self._runes_modified = True
 
 
 class BuffWindows:
@@ -963,14 +1009,6 @@ class RPAnalyzer(BaseAnalyzer):
             self._count_gained += 1
             self._sum_gained += event["runic_power_gained_ams"] // 10
 
-    def print(self):
-        console.print(
-            f"* Over-capped RP {self._count_wasted} times with a total of {self._sum_wasted} RP wasted"
-        )
-        console.print(
-            f"Gained RP {self._count_gained} times for a total of {self._sum_gained} RP"
-        )
-
     def score(self):
         waste = self._sum_wasted - self._sum_gained
         if waste < 50:
@@ -1081,10 +1119,6 @@ class GCDAnalyzer(BaseAnalyzer):
         # Don't count first GCD
         return sum(latencies[1:]) / len(latencies[1:]) if len(latencies) > 1 else 0
 
-    def print(self):
-        average_latency = self.average_latency
-        console.print(f"* Your average GCD usage delay was {average_latency:.2f} ms")
-
     def score(self):
         return max(0, 1 - 0.0017 * self.average_latency)
 
@@ -1137,14 +1171,6 @@ class DiseaseAnalyzer(BaseAnalyzer):
                 num_diseases_dropped += 1
             last_timestamp = timestamp
         return num_diseases_dropped
-
-    def print(self):
-        if self.num_diseases_dropped:
-            console.print(
-                f"[red]x[/red] You dropped diseases {self.num_diseases_dropped} times"
-            )
-        else:
-            console.print("[green]✓[/green] You did not drop diseases")
 
     def score(self):
         if self.num_diseases_dropped == 0:
@@ -1623,7 +1649,7 @@ class CoreAnalysisConfig:
     def get_scorer(self, analyzers):
         return CoreAnalysisScorer(analyzers)
 
-    def create_rune_tracker(self, haste_tracker):
+    def create_rune_tracker(self) -> RuneTracker:
         return RuneTracker(
             should_convert_blood=False,
             should_convert_frost=False,

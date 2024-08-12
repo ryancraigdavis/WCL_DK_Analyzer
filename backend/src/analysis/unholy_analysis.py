@@ -1023,9 +1023,8 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
     def get_scorer(self, analyzers):
         return UnholyAnalysisScorer(analyzers)
 
-    def create_rune_tracker(self, rune_haste_tracker):
+    def create_rune_tracker(self) -> RuneTracker:
         return RuneTracker(
             should_convert_blood=True,
             should_convert_frost=True,
-            rune_haste_tracker=rune_haste_tracker,
         )
