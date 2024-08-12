@@ -69,9 +69,9 @@ const Summary = () => {
 
     if (infoOnly) {
       color = "hl"
-    } else if (averageLatency > 200) {
+    } else if (averageLatency > 300) {
       color = "red";
-    } else if (averageLatency > 100) {
+    } else if (averageLatency > 200) {
       color = "yellow";
     }
 
