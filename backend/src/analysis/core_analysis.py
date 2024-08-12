@@ -488,7 +488,7 @@ class RuneTracker(BaseAnalyzer):
                     break
                 if not rune.can_spend(timestamp):
                     rune.refresh(timestamp)
-                refreshed += 1
+                    refreshed += 1
 
             return refreshed == num
 
@@ -617,12 +617,17 @@ class RuneTracker(BaseAnalyzer):
         if event.get("rune_cost"):
             runes_needed = defaultdict(int)
             current_runes = self.current_runes(event["timestamp"])
+            death_runes = current_runes["Death"]
 
             total_missing = 0
             for rune_type, num_needed in event["rune_cost"].items():
                 missing = max(
-                    0, num_needed - current_runes[rune_type] - current_runes["Death"]
+                    0, num_needed - current_runes[rune_type]
                 )
+                if missing > 0:
+                    death_runes_needed = min(death_runes, missing)
+                    missing -= death_runes_needed
+                    death_runes -= death_runes_needed
                 total_missing += missing
 
                 # respawn the oldest rune if we need it
