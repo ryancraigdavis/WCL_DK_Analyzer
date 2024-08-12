@@ -702,7 +702,7 @@ class RuneTracker(BaseAnalyzer):
 
 
 class PrepullArmyOfTheDeadTracker(BasePreprocessor):
-    # Ghouls last 40 seconds after they are target-able, assume 1s to target
+    # Ghouls last 40 seconds after they are target-able, assume 2s to target
     ARMY_DURATION_MS = 42000
 
     def __init__(self, rune_tracker: RuneTracker):
