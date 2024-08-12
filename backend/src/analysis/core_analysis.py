@@ -707,8 +707,9 @@ class RuneTracker(BaseAnalyzer):
 
 
 class PrepullArmyOfTheDeadTracker(BasePreprocessor):
-    # Ghouls last 40 seconds after they are target-able, assume 2s to target
-    ARMY_DURATION_MS = 42000
+    # Ghouls last 40 seconds after they are target-able, assume 500ms to target
+    ARMY_DURATION_MS = 40500
+    ARMY_CAST_TIME_MS = 4000
 
     def __init__(self, rune_tracker: RuneTracker):
         self._rune_tracker = rune_tracker
@@ -728,7 +729,7 @@ class PrepullArmyOfTheDeadTracker(BasePreprocessor):
     def _modify_runes(self):
         # get the max death time
         max_death_time = max(self._deaths.values())
-        cast_at = max_death_time - self.ARMY_DURATION_MS - 500
+        cast_at = max_death_time - self.ARMY_DURATION_MS - self.ARMY_CAST_TIME_MS
         rune_cd = self._rune_tracker.runes[0].rune_cd
 
         for i in range(0, 6, 2):
