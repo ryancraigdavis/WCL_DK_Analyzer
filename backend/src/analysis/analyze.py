@@ -255,10 +255,12 @@ class Analyzer:
         displayable_events = self.displayable_events
         has_rune_error = any(event.get("rune_spend_error") for event in self._events)
         num_rune_adjustments = sum(
-            1 for event in self._events
-            if event.get("rune_spend_adjustment")
+            1 for event in self._events if event.get("rune_spend_adjustment")
         )
-        analysis = {"has_rune_spend_error": has_rune_error, "num_rune_adjustments": num_rune_adjustments}
+        analysis = {
+            "has_rune_spend_error": has_rune_error,
+            "num_rune_adjustments": num_rune_adjustments,
+        }
 
         for analyzer in analyzers:
             analysis.update(**analyzer.report())

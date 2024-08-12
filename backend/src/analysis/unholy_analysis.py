@@ -149,65 +149,101 @@ class DarkTransformationWindow(Window):
         self.end = min(start + 30000, fight_duration)
         self._dark_transformation_first_attack = None
 
-        self._bl_uptime = BuffUptimeAnalyzer(
-            self.end, buff_tracker, ignore_windows, {"Bloodlust", "Heroism", "Time Warp"}, self.start
-        ) if buff_tracker.has_bl else None
-        self._synapse_springs_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Synapse Springs",
-            self.start,
-            max_duration=10000 - 25,
-        ) if buff_tracker.has_synapse_springs else None
-        self._crushing_weight_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Race Against Death",
-            self.start,
-            max_duration=15000 - 25,
-        ) if buff_tracker.has_crushing_weight else None
-        self._potion_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Golem's Strength",
-            self.start,
-            max_duration=25000 - 25,
-        ) if buff_tracker.has_potion else None
-        self._shrine_purifying_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Fatality",
-            self.start,
-            max_duration=20000 - 25,
-        ) if buff_tracker.has_fatality else None
-        self._unholy_frenzy_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Unholy Frenzy",
-            self.start,
-            max_duration=30000 - 25,
-        ) if buff_tracker.has_unholy_frenzy else None
-        self._berserking_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Berserking",
-            self.start,
-            max_duration=10000 - 25,
-        ) if buff_tracker.has_berserking else None
-        self._fallen_crusader_uptime = BuffUptimeAnalyzer(
-            self.end,
-            buff_tracker,
-            ignore_windows,
-            "Unholy Strength",
-            self.start,
-            max_duration=15000 - 25,
-        ) if buff_tracker.has_fallen_crusader else None
+        self._bl_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                {"Bloodlust", "Heroism", "Time Warp"},
+                self.start,
+            )
+            if buff_tracker.has_bl
+            else None
+        )
+        self._synapse_springs_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Synapse Springs",
+                self.start,
+                max_duration=10000 - 25,
+            )
+            if buff_tracker.has_synapse_springs
+            else None
+        )
+        self._crushing_weight_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Race Against Death",
+                self.start,
+                max_duration=15000 - 25,
+            )
+            if buff_tracker.has_crushing_weight
+            else None
+        )
+        self._potion_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Golem's Strength",
+                self.start,
+                max_duration=25000 - 25,
+            )
+            if buff_tracker.has_potion
+            else None
+        )
+        self._shrine_purifying_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Fatality",
+                self.start,
+                max_duration=20000 - 25,
+            )
+            if buff_tracker.has_fatality
+            else None
+        )
+        self._unholy_frenzy_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Unholy Frenzy",
+                self.start,
+                max_duration=30000 - 25,
+            )
+            if buff_tracker.has_unholy_frenzy
+            else None
+        )
+        self._berserking_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Berserking",
+                self.start,
+                max_duration=10000 - 25,
+            )
+            if buff_tracker.has_berserking
+            else None
+        )
+        self._fallen_crusader_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Unholy Strength",
+                self.start,
+                max_duration=15000 - 25,
+            )
+            if buff_tracker.has_fallen_crusader
+            else None
+        )
 
         self._uptimes = []
         if self._berserking_uptime:

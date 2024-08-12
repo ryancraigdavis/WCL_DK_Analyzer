@@ -597,16 +597,20 @@ class RuneTracker(BaseAnalyzer):
 
     def current_runes(self, timestamp):
         def _count_rune(i):
-            return (1 if
-                    self.runes[i].can_spend(timestamp)
-                    and not (self.runes[i].is_death or self.runes[i].blood_tapped)
-                    else 0)
+            return (
+                1
+                if self.runes[i].can_spend(timestamp)
+                and not (self.runes[i].is_death or self.runes[i].blood_tapped)
+                else 0
+            )
 
         return {
             "Blood": sum(_count_rune(i) for i in range(0, 2)),
             "Frost": sum(_count_rune(i) for i in range(2, 4)),
             "Unholy": sum(_count_rune(i) for i in range(4, 6)),
-            "Death": sum(1 for rune in self.current_death_runes if rune.can_spend(timestamp)),
+            "Death": sum(
+                1 for rune in self.current_death_runes if rune.can_spend(timestamp)
+            ),
         }
 
     def add_event(self, event):
