@@ -46,6 +46,7 @@ class ScoreWeight:
             return 0.5
         return sum((score.score * score.weight) / total for score in score_weights)
 
+
 class AnalysisScorer(BaseAnalyzer):
     def __init__(self, analyzers):
         self._analyzers = {analyzer.__class__: analyzer for analyzer in analyzers}

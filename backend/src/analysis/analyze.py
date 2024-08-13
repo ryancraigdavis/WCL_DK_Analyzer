@@ -1,17 +1,17 @@
 from analysis.core_analysis import (
+    PrepullArmyOfTheDeadTracker,
     CoreAnalysisConfig,
     DeadZoneAnalyzer,
     TalentPreprocessor,
     BuffTracker,
     PetNameDetector,
+    RuneHasteTracker,
 )
 from analysis.frost_analysis import (
     FrostAnalysisConfig,
 )
-import json
 from analysis.items import ItemPreprocessor, TrinketPreprocessor
 from analysis.unholy_analysis import UnholyAnalysisConfig
-from console_table import EventsTable, SHOULD_PRINT
 from report import Fight, Report
 
 
@@ -31,46 +31,16 @@ class Analyzer:
             self.SPEC_ANALYSIS_CONFIGS["Default"],
         )()
         self._buff_tracker = None
-
-    def _get_valid_initial_rune_state(self):
-        rune_death_states = [(False, False), (True, False), (False, True), (True, True)]
-
-        for rune_death_state in rune_death_states:
-            runes = self._analysis_config.create_rune_tracker()
-
-            for i, is_death in enumerate(rune_death_state):
-                runes.runes[i].is_death = is_death
-
-            for event in self._events:
-                runes.add_event(event)
-                if event.get("rune_spend_error"):
-                    break
-            else:
-                return rune_death_state
-
-        return None
+        self.runes = None
 
     def _preprocess_events(self):
-        # boss_events = self._fight.events
-        # print(self._fight.events)
-        # with open('/home/ryan/Desktop/bosses.json', 'w') as f:
-        #     f.write('[\n')  # Start of JSON array
-        #     # for i, event in enumerate(boss_events):
-        #     for i, event in enumerate(boss_events):
-        #         if i > 50:
-        #             break
-        #         json.dump(event, f, indent=4)
-        #         if i < len(boss_events) - 1:
-        #             f.write(',\n')  # Add comma between objects, but not after the last one
-        #         else:
-        #             f.write('\n')
-        #     f.write(']')
         dead_zone_analyzer = self._get_dead_zone_analyzer()
         talent_preprocessor = self._get_talent_preprocessor()
         buff_tracker = self._get_buff_tracker()
         source_id = self._fight.source.id
         pet_analyzer = PetNameDetector()
         items = self._get_item_preprocessor()
+        aotd = PrepullArmyOfTheDeadTracker(self.runes)
 
         for event in self._events:
             if event["sourceID"] == source_id or event["targetID"] == source_id:
@@ -78,14 +48,18 @@ class Analyzer:
                 talent_preprocessor.preprocess_event(event)
                 buff_tracker.preprocess_event(event)
                 items.preprocess_event(event)
+
+            # Pet analyzers
             pet_analyzer.preprocess_event(event)
+            aotd.preprocess_event(event)
 
         for event in self._events:
             dead_zone_analyzer.decorate_event(event)
             buff_tracker.decorate_event(event)
             talent_preprocessor.decorate_event(event)
-            pet_analyzer.decorate_event(event)
             items.decorate_event(event)
+            pet_analyzer.decorate_event(event)
+            aotd.decorate_event(event)
 
         return dead_zone_analyzer
 
@@ -96,7 +70,9 @@ class Analyzer:
 
     def _get_talent_preprocessor(self):
         if not hasattr(self, "_talent_preprocessor"):
-            self._talent_preprocessor = TalentPreprocessor(self._fight.get_combatant_info(self._fight.source.id))
+            self._talent_preprocessor = TalentPreprocessor(
+                self._fight.get_combatant_info(self._fight.source.id)
+            )
         return self._talent_preprocessor
 
     def _get_item_preprocessor(self):
@@ -105,6 +81,11 @@ class Analyzer:
                 self._fight.get_combatant_info(self._fight.source.id)
             )
         return self._item_preprocessor
+
+    def _create_rune_haste_tracker(self, runes) -> RuneHasteTracker:
+        combatant_info = self._fight.get_combatant_info(self._fight.source.id)
+        buff_tracker = self._get_buff_tracker()
+        return RuneHasteTracker(combatant_info, buff_tracker, runes)
 
     def _get_buff_tracker(self):
         if self._buff_tracker is None:
@@ -243,21 +224,13 @@ class Analyzer:
         return events
 
     def analyze(self):
+        self.runes = self._analysis_config.create_rune_tracker()
+        rune_haste_tracker = self._create_rune_haste_tracker(self.runes)
+
         self._preprocess_events()
 
-        runes = self._analysis_config.create_rune_tracker()
-        initial_rune_state = self._get_valid_initial_rune_state()
-        if initial_rune_state:
-            for i, is_death in enumerate(initial_rune_state):
-                runes.runes[i].is_death = is_death
-            has_rune_error = False
-        else:
-            has_rune_error = True
-
-        table = EventsTable()
-
         buff_tracker = self._get_buff_tracker()
-        analyzers = [runes, buff_tracker]
+        analyzers = [rune_haste_tracker, self.runes, buff_tracker]
         analyzers.extend(
             self._analysis_config.get_analyzers(
                 self._fight,
@@ -280,17 +253,16 @@ class Analyzer:
                     analyzer.add_event(event)
 
         displayable_events = self.displayable_events
-
-        if SHOULD_PRINT:
-            for event in displayable_events:
-                table.add_event(event)
-            table.print()
-
-        analysis = {"has_rune_spend_error": has_rune_error}
+        has_rune_error = any(event.get("rune_spend_error") for event in self._events)
+        num_rune_adjustments = sum(
+            1 for event in self._events if event.get("rune_spend_adjustment")
+        )
+        analysis = {
+            "has_rune_spend_error": has_rune_error,
+            "num_rune_adjustments": num_rune_adjustments,
+        }
 
         for analyzer in analyzers:
-            if SHOULD_PRINT:
-                analyzer.print()
             analysis.update(**analyzer.report())
 
         return {

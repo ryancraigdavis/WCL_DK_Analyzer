@@ -28,6 +28,7 @@ class APTrinket(Trinket):
     @property
     def uptime_ghoul(self):
         return True
+
     # @property
     # def snapshots_army_haste(self):
     #     return False
@@ -42,6 +43,7 @@ class HasteTrinket(Trinket):
     def snapshots_gargoyle(self):
         return False
 
+
 class TrinketPreprocessor(BasePreprocessor):
     TRINKETS = [
         APTrinket("Right Eye of Rajh", 56100, "Eye of Doom", 10, 50),
@@ -49,8 +51,12 @@ class TrinketPreprocessor(BasePreprocessor):
         APTrinket("Heart of Rage", 65072, "Rageheart", 20, 100),
         APTrinket("Heart of Rage", 59224, "Rageheart", 20, 100),
         APTrinket("License to Slay", 58180, "Slayer", 15, 100),
-        APTrinket("Impatience of Youth", 62464, "Thrill of Victory", 20, 120, on_use=True),
-        APTrinket("Impatience of Youth", 62469, "Thrill of Victory", 20, 120, on_use=True),
+        APTrinket(
+            "Impatience of Youth", 62464, "Thrill of Victory", 20, 120, on_use=True
+        ),
+        APTrinket(
+            "Impatience of Youth", 62469, "Thrill of Victory", 20, 120, on_use=True
+        ),
         APTrinket("Might of the Ocean", 56285, "Typhoon", 15, 90, on_use=True),
         APTrinket("Might of the Ocean", 55251, "Typhoon", 15, 90, on_use=True),
         APTrinket("Magnetite Mirror", 56345, "Polarization", 15, 90, on_use=True),
@@ -144,6 +150,7 @@ class T11Preprocessor(BasePreprocessor):
     def max_uptime(self):
         return 0.98
 
+
 class T12Preprocessor(BasePreprocessor):
     def __init__(self, combatant_info):
         self.has_2p = False
@@ -180,6 +187,7 @@ class T12Preprocessor(BasePreprocessor):
     @property
     def max_uptime(self):
         return 0.98
+
 
 class ItemPreprocessor(BasePreprocessor):
     def __init__(self, combatant_info):

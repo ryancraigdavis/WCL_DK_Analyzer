@@ -41,7 +41,7 @@ HIT_TYPES = {
 MISS_EVENTS = {"MISS", "DODGE", "PARRY", "IMMUNE", "REFLECT", "EVADE", "RESIST_FULL"}
 CRIT_EVENTS = {"CRIT", "BLOCKED_CRIT", "RESIST_PARTIAL_CRIT"}
 
-NO_RUNES = {"blood": 0, "frost": 0, "unholy": 0}
+NO_RUNES = {"Blood": 0, "Frost": 0, "Unholy": 0}
 
 SPELL_TRANSLATIONS = {
     75176: "Swordguard Embroidery",
@@ -82,7 +82,7 @@ class Report:
     ):
         self.source = source
         self._events = events
-        self._deaths = {death["targetID"]: death for death in deaths}
+        self._deaths = {(death["targetID"], death.get("targetInstance")): death for death in deaths}
         self._rankings = self._parse_rankings(rankings)
         self._combatant_info = combatant_info
         self._encounters = {
@@ -169,8 +169,9 @@ class Report:
     def get_is_boss_actor(self, actor_id: int):
         return self._actors[actor_id]["subType"] == "Boss"
 
-    def get_target_death(self, actor_id: int):
-        return self._deaths.get(actor_id, {}).get("timestamp")
+    def get_target_death(self, actor_id: int, instance_id: int):
+        key = (actor_id, instance_id)
+        return self._deaths.get(key, {}).get("timestamp")
 
     def get_ability_name(self, ability_id: int):
         if ability_id in SPELL_TRANSLATIONS:
@@ -551,6 +552,12 @@ class Fight:
             normalized_event["source_is_boss"] = self._report.get_is_boss_actor(
                 normalized_event["sourceID"]
             )
+            normalized_event["source_dies_at"] = self._normalize_time(
+                self._report.get_target_death(
+                    normalized_event["sourceID"],
+                    normalized_event.get("sourceInstance"),
+                )
+            )
         if "targetID" in event:
             normalized_event["target"] = self._report.get_actor_name(
                 normalized_event["targetID"]
@@ -559,7 +566,10 @@ class Fight:
                 normalized_event["targetID"]
             )
             normalized_event["target_dies_at"] = self._normalize_time(
-                self._report.get_target_death(normalized_event["targetID"])
+                self._report.get_target_death(
+                    normalized_event["targetID"],
+                    normalized_event.get("targetInstance"),
+                )
             )
         if "hitType" in event:
             normalized_event["hitType"] = HIT_TYPES[event["hitType"]]
@@ -577,18 +587,18 @@ class Fight:
                     if resource.get("cost"):
                         normalized_event["runic_power_cost"] = resource["cost"]
                 if resource["type"] == 20:
-                    normalized_event["rune_cost"]["blood"] += resource["cost"]
-                    normalized_event["runes_used"]["blood"] += min(
+                    normalized_event["rune_cost"]["Blood"] += resource["cost"]
+                    normalized_event["runes_used"]["Blood"] += min(
                         resource["amount"], resource["cost"]
                     )
                 if resource["type"] == rune_resource_types["frost"]:
-                    normalized_event["rune_cost"]["frost"] += resource["cost"]
-                    normalized_event["runes_used"]["frost"] += min(
+                    normalized_event["rune_cost"]["Frost"] += resource["cost"]
+                    normalized_event["runes_used"]["Frost"] += min(
                         resource["amount"], resource["cost"]
                     )
                 if resource["type"] == rune_resource_types["unholy"]:
-                    normalized_event["rune_cost"]["unholy"] += resource["cost"]
-                    normalized_event["runes_used"]["unholy"] += min(
+                    normalized_event["rune_cost"]["Unholy"] += resource["cost"]
+                    normalized_event["runes_used"]["Unholy"] += min(
                         resource["amount"], resource["cost"]
                     )
             if normalized_event.get("rune_cost") == NO_RUNES:
