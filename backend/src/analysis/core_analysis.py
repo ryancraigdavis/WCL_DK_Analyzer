@@ -252,6 +252,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
         return [
             Window(window.start, min(window.end, self._fight.duration))
             for window in self._dead_zones
+            if window.start <= self._fight.duration
         ]
 
     def decorate_event(self, event):
