@@ -82,7 +82,9 @@ class Report:
     ):
         self.source = source
         self._events = events
-        self._deaths = {(death["targetID"], death.get("targetInstance")): death for death in deaths}
+        self._deaths = {
+            (death["targetID"], death.get("targetInstance")): death for death in deaths
+        }
         self._rankings = self._parse_rankings(rankings)
         self._combatant_info = combatant_info
         self._encounters = {
@@ -224,9 +226,7 @@ class Report:
         if ability_id == 60229:
             return "https://wow.zamimg.com/images/wow/icons/large/inv_inscription_tarotgreatness.jpg"
         if ability_id == 63560:
-            return (
-                "https://wow.zamimg.com/images/wow/icons/large/achievement_boss_festergutrotface.jpg"
-            )
+            return "https://wow.zamimg.com/images/wow/icons/large/achievement_boss_festergutrotface.jpg"
 
         for ability in self._abilities:
             if ability["gameID"] == ability_id:
@@ -235,9 +235,7 @@ class Report:
                 )
         else:
             if ability_id == 79634:
-                return (
-                    "https://wow.zamimg.com/images/wow/icons/large/inv_potiond_1.jpg"
-                )
+                return "https://wow.zamimg.com/images/wow/icons/large/inv_potiond_1.jpg"
             if ability_id == 48470:
                 return "https://wow.zamimg.com/images/wow/icons/large/spell_nature_giftofthewild.jpg"
             if ability_id == 79472:
