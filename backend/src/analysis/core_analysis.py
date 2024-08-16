@@ -1,3 +1,4 @@
+import functools
 import itertools
 from collections import defaultdict
 from typing import Optional
@@ -11,7 +12,6 @@ from analysis.base import (
     range_overlap,
 )
 from analysis.items import Trinket, ItemPreprocessor
-from console_table import console
 from report import Fight
 
 
@@ -40,7 +40,9 @@ class DeadZoneAnalyzer(BasePreprocessor):
         self._last_timestamp = 0
         self._checker = {
             "Ascendant Council": self._check_ascendant_council,
-            "Atramedes": self._check_atramedes,
+            "Atramedes": functools.partial(
+                self._check_boss_events_occur, only_melee=True
+            ),
             "Al'Akir": self._check_al_akir,
             "Nefarion's End": self._check_nefarion_mind_control,
             "Loatheb": self._check_loatheb,
@@ -56,10 +58,13 @@ class DeadZoneAnalyzer(BasePreprocessor):
         self._encounter_name = self._fight.encounter.name
         self._is_hard_mode = self._fight.is_hard_mode
 
-    def _check_boss_events_occur(self, event):
+    def _check_boss_events_occur(self, event, only_melee=False):
         if event.get("source_is_boss") or (
             event.get("target_is_boss") and event["type"] == "cast"
         ):
+            if only_melee and event["ability"] not in self.MELEE_ABILITIES:
+                return
+
             if event["timestamp"] - self._last_timestamp > 7000:
                 dead_zone = self.DeadZone(self._last_timestamp, event["timestamp"])
                 self._dead_zones.append(dead_zone)
@@ -163,33 +168,6 @@ class DeadZoneAnalyzer(BasePreprocessor):
             dead_zone = self.DeadZone(self._last_event["timestamp"], event["timestamp"])
             self._dead_zones.append(dead_zone)
 
-    def _check_atramedes(self, event):
-        if event.get("target") != "Atramedes" and event.get("source") != "Atramedes":
-            return
-
-        current_time = event["timestamp"]
-
-        # Check if it's the first event
-        if self._last_timestamp == 0:
-            self._last_timestamp = current_time
-            return
-
-        phase_duration = 125000  # 125 seconds for a full cycle
-        current_phase_time = current_time % phase_duration
-
-        # Check for the air phase (85-125 seconds in each cycle)
-        if 85000 < current_phase_time <= 125000:
-            # If this is the start of an air phase, create a dead zone
-            if self._last_timestamp % phase_duration <= 85000:
-                dead_zone_start = (
-                    current_time // phase_duration
-                ) * phase_duration + 85000
-                dead_zone_end = dead_zone_start + 40000  # 40 seconds air phase
-                dead_zone = self.DeadZone(dead_zone_start, dead_zone_end)
-                self._dead_zones.append(dead_zone)
-
-        self._last_timestamp = current_time
-
     def _check_maexxna(self, event):
         if event["type"] not in ("removedebuff", "applydebuff"):
             return
@@ -271,7 +249,11 @@ class DeadZoneAnalyzer(BasePreprocessor):
         return None
 
     def get_dead_zones(self):
-        return [Window(window.start, window.end) for window in self._dead_zones]
+        return [
+            Window(window.start, min(window.end, self._fight.duration))
+            for window in self._dead_zones
+            if window.start <= self._fight.duration
+        ]
 
     def decorate_event(self, event):
         dead_zone = self.get_recent_dead_zone(event["timestamp"])
@@ -621,9 +603,7 @@ class RuneTracker(BaseAnalyzer):
 
             total_missing = 0
             for rune_type, num_needed in event["rune_cost"].items():
-                missing = max(
-                    0, num_needed - current_runes[rune_type]
-                )
+                missing = max(0, num_needed - current_runes[rune_type])
                 if missing > 0:
                     death_runes_needed = min(death_runes, missing)
                     missing -= death_runes_needed
