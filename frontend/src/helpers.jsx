@@ -2,6 +2,7 @@ import React, {useState} from "react"
 
 export const Check = <i className="fa fa-check green" aria-hidden="true"></i>
 export const Info = <i className="fa fa-info hl" aria-hidden="true"></i>
+export const CircleRight = <i class="fa fa-location-arrow hl" aria-hidden="true"></i>
 export const X = <i className="fa fa-times red" aria-hidden="true"></i>
 export const Warning = <i className={"fa fa-warning yellow"} aria-hidden="true" />
 
@@ -103,15 +104,12 @@ export const formatCPM = (cpm, targetCPM, spellName) => {
   )
 }
 
-export const formatUpTime = (upTime, spellName, infoOnly=false, maxUptime = 1.0) => {
+export const formatUpTime = (upTime, spellName, useCircleRight = false, maxUptime = 1.0, customRender = null) => {
   let Icon = X
   const uptimePercent = upTime / maxUptime
 
   let color = "red"
-  if (infoOnly) {
-    color = "hl"
-    Icon = Info
-  } else if (uptimePercent > 0.9) {
+  if (uptimePercent > 0.9) {
     color = "green"
     Icon = Check
   } else if (uptimePercent > 0.65) {
@@ -121,38 +119,45 @@ export const formatUpTime = (upTime, spellName, infoOnly=false, maxUptime = 1.0)
     color = "orange"
   }
 
+  if (useCircleRight) {
+    Icon = CircleRight
+  }
+
   color += " uptime-score"
 
-  let tooltip = null
+  const tooltipContent = (
+    <>
+      <span className="green">Green: </span>
+      More than {Number(maxUptime * 0.9 * 100).toFixed(2)}%
+      <br />
+      <span className="yellow">Yellow: </span>
+      Between {Number(maxUptime * 0.65 * 100).toFixed(2)}% and {Number(maxUptime * 0.9 * 100).toFixed(2)}%
+      <br />
+      <span className="orange">Orange: </span>
+      Between {Number(maxUptime * 0.5 * 100).toFixed(2)}% and {Number(maxUptime * 0.65 * 100).toFixed(2)}%
+      <br />
+      <span className="red">Red: </span>
+      Between 0 and {Number(maxUptime * 0.5 * 100).toFixed(2)}%
+    </>
+  )
 
-  if (!infoOnly) {
-    const tooltipText = (
-      <>
-        <span className="green">Green: </span>
-        More than {Number(maxUptime * 0.9 * 100).toFixed(2)}%
-        <br />
-        <span className="yellow">Yellow: </span>
-        Between {Number(maxUptime * 0.65 * 100).toFixed(2)}% and {Number(maxUptime * 0.9 * 100).toFixed(2)}%
-        <br />
-        <span className="orange">Orange: </span>
-        Between {Number(maxUptime * 0.5 * 100).toFixed(2)}% and {Number(maxUptime * 0.65 * 100).toFixed(2)}%
-        <br />
-        <span className="red">Red: </span>
-        Between 0 and {Number(maxUptime * 0.5 * 100).toFixed(2)}%
-      </>
-    )
-    tooltip = (
+  const content = (
+    <>
+      {spellName} uptime: <span className={color}>{(upTime * 100).toFixed(2)}%</span>
       <span className={"uptime-tooltip"}>
-          <Tooltip tooltipText={tooltipText} />
+        <Tooltip tooltipText={tooltipContent} />
       </span>
-    )
+    </>
+  )
+
+  if (customRender) {
+    return customRender(Icon, content);
   }
 
   return (
     <div className="uptime centered">
       <div>{Icon}</div>
-      {spellName} uptime: <span className={color}>{(upTime * 100).toFixed(2)}%</span>
-      {tooltip}
+      {content}
     </div>
   )
 }

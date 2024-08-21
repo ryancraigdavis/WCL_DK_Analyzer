@@ -358,33 +358,10 @@ class DarkTransformationWindow(Window):
     def score(self):
         dark_transformation_score = ScoreWeight.calculate(
             ScoreWeight(self.berserking_uptime or 0, self.berserking_uptime or 0),
-            ScoreWeight(self.potion_uptime or 0, 3 if self.potion_uptime else 0),
-            ScoreWeight(
-                self.synapse_springs_uptime or 0,
-                3 if self.synapse_springs_uptime else 0,
-            ),
-            ScoreWeight(
-                self.fallen_crusader_uptime or 0,
-                3 if self.fallen_crusader_uptime else 0,
-            ),
             ScoreWeight(
                 self.unholy_frenzy_uptime or 0, 10 if self.unholy_frenzy_uptime else 0
             ),
             ScoreWeight(self.bl_uptime or 0, 10 if self.bl_uptime else 0),
-            ScoreWeight(
-                sum(
-                    [
-                        t["uptime"].uptime()
-                        for t in self.trinket_uptimes
-                        if t["uptime"].uptime() > 0
-                    ]
-                )
-                / (
-                    sum(1 for t in self.trinket_uptimes if t["uptime"].uptime() > 0)
-                    or 1
-                ),
-                sum(2 for t in self.trinket_uptimes if t["uptime"].uptime() > 0),
-            ),
         )
         return dark_transformation_score
 
