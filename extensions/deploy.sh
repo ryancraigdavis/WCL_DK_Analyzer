@@ -10,7 +10,7 @@ zip -r9 ../chrome_extension.zip content.js icon_48.png icon_128.png manifest.jso
 cd ..
 cp chrome_extension.zip firefox_extension.zip
 sed 's/"manifest_version": 3/"manifest_version": 2/' src/manifest.json > /tmp/manifest.json
-sed -i '' 's/"action"/"browser_action"/' /tmp/manifest.json
+sed -i.bak 's/"action"/"browser_action"/' /tmp/manifest.json
 
 cd /tmp
 zip "${cwd}/firefox_extension.zip" -u manifest.json
