@@ -31,28 +31,34 @@ function isObject(object) {
 
 function init() {
   const url = window.location.href
+  console.log('Init called with URL:', url)
 
-  if (url.indexOf("fight=") < 0) {
+  if (!url.includes('fight=')) {
+    console.log('Hiding button: No fight parameter')
     hideButton()
     removeIframe()
     return
   }
 
-  if (url.indexOf("source=") < 0) {
+  if (!url.includes('source=')) {
+    console.log('Hiding button: No source parameter')
     hideButton()
     removeIframe()
     return
   }
 
-  if (url.indexOf("/reports/") < 0) {
+  if (!url.includes('/reports/')) {
+    console.log('Hiding button: Not a report page')
     hideButton()
     removeIframe()
+    return
   }
 
   addAnalyzeButton()
 
   const params = parseParams()
   if (currentParams && !isEqual(currentParams, params)) {
+    console.log('Parameters changed, updating iframe')
     document.getElementById(iframeId).src = getFrameURL(params)
     currentParams = params
   }
@@ -78,12 +84,41 @@ function removeIframe() {
 
 function parseParams() {
   const url = window.location.href
-  let fight = url.match(/fight=(\w+)/)[1]
-  fight = fight === "last" ? -1 : fight
-  const source = url.match(/source=(\d+)/)[1]
-  const report = url.match(/reports\/([:\w]+)[\/#]/)[1]
-
-  return {fight, source, report}
+  console.log('Parsing URL:', url)
+  
+  try {
+    // Get the report ID from the path - more flexible matching
+    const reportMatch = url.match(/reports\/([^/?#]+)/)
+    if (!reportMatch) throw new Error('Could not find report ID in URL')
+    const report = reportMatch[1]
+    
+    // Get parameters from URL search params - more reliable than regex
+    const urlParams = new URLSearchParams(window.location.search)
+    const fightParam = urlParams.get('fight')
+    const sourceParam = urlParams.get('source')
+    
+    if (!fightParam) throw new Error('No fight parameter found')
+    if (!sourceParam) throw new Error('No source parameter found')
+    
+    // Convert fight parameter
+    const fight = fightParam === "last" ? -1 : fightParam
+    
+    console.log('Successfully parsed params:', { fight, source: sourceParam, report })
+    
+    return {
+      fight,
+      source: sourceParam,
+      report
+    }
+  } catch (error) {
+    console.error('Error parsing URL parameters:', error)
+    console.log('URL parts:', {
+      pathname: window.location.pathname,
+      search: window.location.search,
+      hash: window.location.hash
+    })
+    return null
+  }
 }
 
 
