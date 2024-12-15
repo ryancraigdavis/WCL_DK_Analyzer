@@ -1,8 +1,21 @@
-import {formatIcon, formatTimestamp, formatUpTime, formatUsage, hl, Info} from "./helpers"
-
+import {formatIcon, formatTimestamp, formatUpTime, formatUsage, hl, CircleRight, Info} from "./helpers"
 
 export const DarkTransformationAnalysis = ({ dark_transformation }) => {
   const { windows } = dark_transformation
+
+  const DTFormatUpTime = (upTime, spellName, maxUptime = 1.0) => {
+    const isSpecialSpell = spellName === "Bloodlust" || spellName === "Unholy Frenzy" || spellName === "Berserking (Troll)";
+    
+    // Use a custom render function to override just the icon
+    const customRender = (icon, content) => (
+      <div className="uptime centered">
+        <div>{isSpecialSpell ? icon : CircleRight}</div>
+        {content}
+      </div>
+    );
+
+    return formatUpTime(upTime, spellName, !isSpecialSpell, maxUptime, customRender);
+  };
 
   return (
     <div>
@@ -35,37 +48,37 @@ export const DarkTransformationAnalysis = ({ dark_transformation }) => {
                     const icon = formatIcon(uptime.name, uptime.icon)
                     return (
                       <div key={i}>
-                        {formatUpTime(uptime.uptime, <>{icon} {uptime.name}</>)}
+                        {DTFormatUpTime(uptime.uptime, <>{icon} {uptime.name}</>)}
                       </div>
                     )
                   })
                 }
                 <div>
-                  {formatUpTime(window.fallen_crusader_uptime, "Unholy Strength")}
+                  {DTFormatUpTime(window.fallen_crusader_uptime, "Unholy Strength")}
                 </div>
                 {window.synapse_springs_uptime !== 0 && (
                   <div>
-                    {formatUpTime(window.synapse_springs_uptime, "Synapse Springs")}
+                    {DTFormatUpTime(window.synapse_springs_uptime, "Synapse Springs")}
                   </div>
                 )}
                 {window.potion_uptime !== 0 && (
                   <div>
-                    {formatUpTime(window.potion_uptime, "Golem's Strength (Potion)")}
+                    {DTFormatUpTime(window.potion_uptime, "Golem's Strength (Potion)")}
                   </div>
                 )}
                 {window.unholy_frenzy_uptime !== 0 && (
                   <div>
-                    {formatUpTime(window.unholy_frenzy_uptime, "Unholy Frenzy")}
+                    {DTFormatUpTime(window.unholy_frenzy_uptime, "Unholy Frenzy")}
                   </div>
                 )}
                 {window.bloodlust_uptime !== 0 && (
                   <div>
-                    {formatUpTime(window.bloodlust_uptime, "Bloodlust")}
+                    {DTFormatUpTime(window.bloodlust_uptime, "Bloodlust")}
                   </div>
                 )}
                 {window.berserking_uptime !== null && window.berserking_uptime !== 0 && (
                   <div>
-                    {formatUpTime(window.berserking_uptime, "Berserking (Troll)")}
+                    {DTFormatUpTime(window.berserking_uptime, "Berserking (Troll)")}
                   </div>
                 )}
               </div>
