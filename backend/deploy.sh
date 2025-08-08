@@ -4,7 +4,7 @@ set -euxo pipefail
 
 cwd="$(pwd)"
 
-cd venv/lib/python*/site-packages/
+cd .venv/lib/python3.12/site-packages/
 zip -u -r9 "${cwd}/function.zip" * -x '__pycache__/*' || true
 
 cd "${cwd}/src"
@@ -17,7 +17,7 @@ if [[ $(aws lambda list-functions --query "Functions[?FunctionName=='$WCL_FUNCTI
   echo "Lambda function does not exist. Creating function..."
   aws lambda create-function \
     --function-name "$WCL_FUNCTION_NAME" \
-    --runtime python3.9 \
+    --runtime python3.12 \
     --handler handler.handler \
     --code "S3Bucket=wcl-analyzer-lambda-code,S3Key=function.zip" \
     --role arn:aws:iam::${AWS_ACCOUNT_ID}:role/service-role/wcl-analyzer-lambda-role-rh6pdnzt \

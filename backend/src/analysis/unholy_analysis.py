@@ -556,9 +556,11 @@ class GargoyleWindow(Window):
                 2 if self.snapshotted_t11 is not None else 0,
             ),
             ScoreWeight(
-                int(self.snapshotted_bloodfury)
-                if self.snapshotted_bloodfury is not None
-                else 0,
+                (
+                    int(self.snapshotted_bloodfury)
+                    if self.snapshotted_bloodfury is not None
+                    else 0
+                ),
                 2 if self.snapshotted_bloodfury is not None else 0,
             ),
         )
