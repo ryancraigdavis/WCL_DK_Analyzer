@@ -1424,98 +1424,6 @@ class TrinketAnalyzer(BaseAnalyzer):
         )
 
 
-class T11UptimeAnalyzer(BaseAnalyzer):
-    def __init__(
-        self,
-        fight_duration,
-        buff_tracker: BuffTracker,
-        items: ItemPreprocessor,
-        ignore_windows,
-    ):
-        self._fight_duration = fight_duration
-        self._items = items
-        self._has_4p = items.has_t11_4p()
-        self._t11_uptime = BuffUptimeAnalyzer(
-            fight_duration,
-            buff_tracker,
-            ignore_windows,
-            "Death Eater",
-        )
-
-    def add_event(self, event):
-        if not self._has_4p:
-            return
-
-        self._t11_uptime.add_event(event)
-
-    def report(self):
-        if not self._has_4p:
-            return {}
-
-        return {
-            "t11_uptime": self._t11_uptime.uptime(),
-            "t11_max_uptime": self._items.t11_max_uptime(),
-        }
-
-    def score(self):
-        if not self._has_4p:
-            return 0
-
-        return min(self._t11_uptime.score() / self._items.t11_max_uptime(), 1)
-
-    def score_weight(self):
-        if not self._has_4p:
-            return 0
-
-        return 2
-
-
-class T12UptimeAnalyzer(BaseAnalyzer):
-    def __init__(
-        self,
-        fight_duration,
-        buff_tracker: BuffTracker,
-        items: ItemPreprocessor,
-        ignore_windows,
-    ):
-        self._fight_duration = fight_duration
-        self._items = items
-        self._has_2p = items.has_t12_2p()
-        self._t12_uptime = BuffUptimeAnalyzer(
-            fight_duration,
-            buff_tracker,
-            ignore_windows,
-            "Death Eater",
-        )
-
-    def add_event(self, event):
-        if not self._has_2p:
-            return
-
-        self._t12_uptime.add_event(event)
-
-    def report(self):
-        if not self._has_2p:
-            return {}
-
-        return {
-            "t12_uptime": self._t12_uptime.uptime(),
-            "t12_max_uptime": self._items.t12_max_uptime(),
-        }
-
-    def score(self):
-        if not self._has_2p:
-            return 0
-
-        return min(self._t12_uptime.score() / self._items.t12_max_uptime(), 1)
-
-    def score_weight(self):
-        if not self._has_2p:
-            return 0
-
-        return 2
-
-
 class BuffUptimeAnalyzer(BaseAnalyzer):
     def __init__(
         self,
@@ -1599,12 +1507,6 @@ class CoreAnalysisScorer(AnalysisScorer):
             TrinketAnalyzer: {
                 "weight": lambda ta: ta.num_on_use_trinkets,
             },
-            T11UptimeAnalyzer: {
-                "weight": lambda t11a: t11a.score_weight(),
-            },
-            # T12UptimeAnalyzer: {
-            #     "weight": lambda t12a: t12a.score_weight(),
-            # },
         }
 
     def report(self):
@@ -1628,12 +1530,6 @@ class CoreAnalysisConfig:
             SynapseSpringsAnalyzer(fight.duration),
             MeleeUptimeAnalyzer(fight.duration, dead_zone_analyzer.get_dead_zones()),
             TrinketAnalyzer(fight.duration, items),
-            T11UptimeAnalyzer(
-                fight.duration, buff_tracker, items, dead_zone_analyzer.get_dead_zones()
-            ),
-            T12UptimeAnalyzer(
-                fight.duration, buff_tracker, items, dead_zone_analyzer.get_dead_zones()
-            ),
         ]
 
     def get_scorer(self, analyzers):

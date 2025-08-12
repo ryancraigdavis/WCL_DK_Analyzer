@@ -22,8 +22,7 @@ from analysis.core_analysis import (
     MeleeUptimeAnalyzer,
     TrinketAnalyzer,
     BuffUptimeAnalyzer,
-    T11UptimeAnalyzer,
-    T12UptimeAnalyzer,
+    # T15UptimeAnalyzer,
     RuneHasteTracker,
 )
 from analysis.items import ItemPreprocessor
@@ -487,9 +486,6 @@ class GargoyleWindow(Window):
         self.snapshotted_synapse = buff_tracker.is_active("Synapse Springs", start)
         self.snapshotted_fc = buff_tracker.is_active("Unholy Strength", start)
         self.snapshotted_potion = buff_tracker.is_active("Golem's Strength", start)
-        self.snapshotted_t11 = (
-            buff_tracker.is_active("Death Eater", start) if items.has_t11_4p() else None
-        )
         self.snapshotted_bloodfury = (
             buff_tracker.is_active("Blood Fury", start)
             if buff_tracker.has_bloodfury
@@ -550,10 +546,6 @@ class GargoyleWindow(Window):
                 len([t for t in self.trinket_snapshots if t["did_snapshot"]])
                 / (len(self.trinket_snapshots) if self.trinket_snapshots else 1),
                 len(self.trinket_snapshots) * 2,
-            ),
-            ScoreWeight(
-                int(self.snapshotted_t11) if self.snapshotted_t11 is not None else 0,
-                2 if self.snapshotted_t11 is not None else 0,
             ),
             ScoreWeight(
                 (
@@ -624,7 +616,6 @@ class GargoyleAnalyzer(BaseAnalyzer):
                         "snapshotted_synapse": window.snapshotted_synapse,
                         "snapshotted_potion": window.snapshotted_potion,
                         "snapshotted_fc": window.snapshotted_fc,
-                        "snapshotted_t11": window.snapshotted_t11,
                         "snapshotted_bloodfury": window.snapshotted_bloodfury,
                         "num_casts": window.num_casts,
                         "num_melees": window.num_melees,
@@ -959,12 +950,6 @@ class UnholyAnalysisScorer(AnalysisScorer):
             TrinketAnalyzer: {
                 "weight": lambda ta: ta.num_on_use_trinkets * 2,
             },
-            T11UptimeAnalyzer: {
-                "weight": lambda t11a: t11a.score_weight(),
-            },
-            # T12UptimeAnalyzer: {
-            #     "weight": lambda t12a: t12a.score_weight(),
-            # },
             BloodTapAnalyzer: {
                 "weight": 1,
             },
