@@ -1,7 +1,30 @@
 [project]
 name = "dk-parse"
 version = "1"
+requires-python = ">=3.12"
 dependencies = ["requests", "rich", "fastapi", "uvicorn[standard]", "aiohttp", "sentry-sdk[fastapi]"]
 
 [project.optional-dependencies]
 dev = ["pytest", "black", "flake8", "mangum"]
+
+[tool.hatch.envs.default.scripts]
+dev-server = "cd src && uvicorn api:app --reload"
+# test = "pytest"
+lint = ["black src/", "flake8 src/ --max-line-length 150 --statistics --show-source"]
+lint-check = ["black --check src/", "flake8 src/ --max-line-length 150 --statistics --show-source"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "flake8>=7.3.0",
+    "hatch>=1.9.0",
+    "mangum>=0.19.0",
+    "pytest>=8.4.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
