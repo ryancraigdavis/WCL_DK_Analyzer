@@ -363,7 +363,6 @@ const Summary = () => {
           {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
           {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
           {summary.dark_transformation_uptime !== undefined && formatUpTime(summary.dark_transformation_uptime, "Dark Transformation", false, summary.dark_transformation_max_uptime)}
-          {summary.t11_uptime !== undefined && formatUpTime(summary.t11_uptime, "Death Eater (T11 4p)", false, summary.t11_max_uptime)}
           {summary.melee_uptime !== undefined && formatUpTime(summary.melee_uptime, "Melee")}
           {summary.unbreakable_armor && formatUA(summary.unbreakable_armor)}
           {summary.blood_plague_uptime !== undefined && formatUpTime(summary.blood_plague_uptime, "Blood Plague")}

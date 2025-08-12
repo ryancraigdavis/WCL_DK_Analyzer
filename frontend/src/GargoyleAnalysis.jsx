@@ -36,7 +36,6 @@ export const GargoyleAnalysis = ({ gargoyle }) => {
                 {booleanCheck(window.snapshotted_potion, "You snapshotted your Golemsblood Potion", "You did not snapshot your Golemsblood Potion")}
                 {booleanCheck(window.snapshotted_fc, "You snapshotted Fallen Crusader", "You did not snapshot Fallen Crusader")}
                 {window.snapshotted_bloodfury !== null && booleanCheck(window.snapshotted_bloodfury, "You snapshotted Blood Fury", "You did not snapshot Blood Fury")}
-                {window.snapshotted_t11 !== null && booleanCheck(window.snapshotted_t11, "You snapshotted Death Eater (T11 4p)", "You did not snapshot Death Eater (T11 4p)")}
               </div>
             )
           })}

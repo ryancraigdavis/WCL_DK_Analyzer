@@ -46,28 +46,14 @@ class HasteTrinket(Trinket):
 
 class TrinketPreprocessor(BasePreprocessor):
     TRINKETS = [
-        APTrinket("Right Eye of Rajh", 56100, "Eye of Doom", 10, 50),
-        APTrinket("Right Eye of Rajh", 56431, "Eye of Doom", 10, 50),
-        APTrinket("Heart of Rage", 65072, "Rageheart", 20, 100),
-        APTrinket("Heart of Rage", 59224, "Rageheart", 20, 100),
-        APTrinket("License to Slay", 58180, "Slayer", 15, 100),
-        APTrinket(
-            "Impatience of Youth", 62464, "Thrill of Victory", 20, 120, on_use=True
-        ),
-        APTrinket(
-            "Impatience of Youth", 62469, "Thrill of Victory", 20, 120, on_use=True
-        ),
-        APTrinket("Might of the Ocean", 56285, "Typhoon", 15, 90, on_use=True),
-        APTrinket("Might of the Ocean", 55251, "Typhoon", 15, 90, on_use=True),
-        APTrinket("Magnetite Mirror", 56345, "Polarization", 15, 90, on_use=True),
-        APTrinket("Magnetite Mirror", 55814, "Polarization", 15, 90, on_use=True),
-        APTrinket("King of Boars", 52351, "King of Boars", 20, 120, on_use=True),
-        APTrinket("Fury of Angerforge", 59461, "Forged Fury", 20, 120, on_use=True),
-        APTrinket("Heart of Solace", 56393, "Heartened", 20, 100),
-        APTrinket("Heart of Solace", 55868, "Heartened", 20, 100),
-        HasteTrinket("Crushing Weight", 65118, "Race Against Death", 15, 75),
-        HasteTrinket("Crushing Weight", 59506, "Race Against Death", 15, 75),
-        HasteTrinket("Shrine-Cleansing Purifier", 63838, "Fatality", 20, 100),
+        APTrinket("Relic of Xuen", 79327, "Blessing of the Celestials", 15, 55),
+        APTrinket("Zen Alchemist Stone", 75274, "Zen Alchemist Stone", 15, 55),
+        HasteTrinket("Darkmist Vortex", 87172, "Alacrity", 20, 115),
+        HasteTrinket("Darkmist Vortex", 86894, "Alacrity", 20, 115),
+        HasteTrinket("Darkmist Vortex", 86336, "Alacrity", 20, 115),
+        APTrinket("Lei Shen's Final Orders", 87072, "Unwavering Might", 20, 55),
+        APTrinket("Lei Shen's Final Orders", 86144, "Unwavering Might", 20, 55),
+        APTrinket("Lei Shen's Final Orders", 86802, "Unwavering Might", 20, 55),
     ]
     TRINKET_MAP = {trinket.item_id: trinket for trinket in TRINKETS}
     TRINKEY_MAP_BY_BUFF_NAME = {trinket.buff_name: trinket for trinket in TRINKETS}
@@ -112,93 +98,53 @@ class TrinketPreprocessor(BasePreprocessor):
         return len(self._trinkets)
 
 
-class T11Preprocessor(BasePreprocessor):
-    def __init__(self, combatant_info):
-        self.has_4p = False
-        self._calc_num_t11(combatant_info)
+# class T15Preprocessor(BasePreprocessor):
+#     def __init__(self, combatant_info):
+#         self.has_4p = False
+#         self._calc_num_t15(combatant_info)
 
-    def _calc_num_t11(self, combatant_info):
-        count = 0
+#     def _calc_num_t15(self, combatant_info):
+#         count = 0
 
-        for item in combatant_info.get("gear", []):
-            if item["id"] in {
-                # Head
-                65181,
-                60341,
-                # Shoulders
-                65183,
-                60343,
-                # Chest
-                65179,
-                60339,
-                # Legs
-                65182,
-                60342,
-                # Hands
-                65180,
-                60340,
-            }:
-                count += 1
-        if count >= 4:
-            self.has_4p = True
+#         for item in combatant_info.get("gear", []):
+#             if item["id"] in {
+#                 # Head
+#                 65181,
+#                 60341,
+#                 # Shoulders
+#                 65183,
+#                 60343,
+#                 # Chest
+#                 65179,
+#                 60339,
+#                 # Legs
+#                 65182,
+#                 60342,
+#                 # Hands
+#                 65180,
+#                 60340,
+#             }:
+#                 count += 1
+#         if count >= 4:
+#             self.has_4p = True
 
-    def preprocess_event(self, event):
-        if event["type"] == "applybuff" and event["ability"] == "Death Eater":
-            self.has_4p = True
+#     def preprocess_event(self, event):
+#         if event["type"] == "applybuff" and event["ability"] == "Death Eater":
+#             self.has_4p = True
 
-    @property
-    def max_uptime(self):
-        return 0.98
-
-
-class T12Preprocessor(BasePreprocessor):
-    def __init__(self, combatant_info):
-        self.has_2p = False
-        self._calc_num_t12(combatant_info)
-
-    def _calc_num_t12(self, combatant_info):
-        count = 0
-        for item in combatant_info.get("gear", []):
-            if item["id"] in {
-                # Head
-                71478,
-                71060,
-                # Shoulders
-                71480,
-                71062,
-                # Chest
-                71058,
-                71476,
-                # Legs
-                71479,
-                71061,
-                # Hands
-                71477,
-                71059,
-            }:
-                count += 1
-        if count >= 2:
-            self.has_2p = True
-
-    def preprocess_event(self, event):
-        if event["type"] == "applybuff" and event["ability"] == "Smoldering Rune":
-            self.has_2p = True
-
-    @property
-    def max_uptime(self):
-        return 0.98
+#     @property
+#     def max_uptime(self):
+#         return 0.98
 
 
 class ItemPreprocessor(BasePreprocessor):
     def __init__(self, combatant_info):
         self._trinkets = TrinketPreprocessor(combatant_info)
-        self._t11 = T11Preprocessor(combatant_info)
-        self._t12 = T12Preprocessor(combatant_info)
+        # self._t15 = T15Preprocessor(combatant_info)
 
         self._processors = [
             self._trinkets,
-            self._t11,
-            self._t12,
+            # self._t15,
         ]
 
     def preprocess_event(self, event):
@@ -208,17 +154,8 @@ class ItemPreprocessor(BasePreprocessor):
     def has_trinket(self, buff_name):
         return self._trinkets.has_trinket(buff_name)
 
-    def has_t11_4p(self):
-        return self._t11.has_4p
-
-    def has_t12_2p(self):
-        return self._t12.has_2p
-
-    def t11_max_uptime(self):
-        return self._t11.max_uptime
-
-    def t12_max_uptime(self):
-        return self._t12.max_uptime
+    # def has_t14_4p(self):
+    #     return self._t15.has_4p
 
     @property
     def trinkets(self):
