@@ -1,4 +1,4 @@
-import {booleanCheck, formatIcon, formatTimestamp, formatUsage, hl, Info} from "./helpers"
+import {formatIcon, formatTimestamp, formatUsage, hl, Info} from "./helpers"
 
 
 export const GargoyleAnalysis = ({ gargoyle }) => {
@@ -25,17 +25,34 @@ export const GargoyleAnalysis = ({ gargoyle }) => {
                 </div>
                 {window.trinket_snapshots.map((snapshot, i) => {
                   const icon = formatIcon(snapshot.name, snapshot.icon)
+                  const gargoyleDuration = window.end - window.start
+                  const uptimePercent = gargoyleDuration > 0 ? ((snapshot.uptime / gargoyleDuration) * 100).toFixed(1) : 0
 
                   return (
                     <div key={i}>
-                      {booleanCheck(snapshot.did_snapshot, <>You snapshotted {icon} {snapshot.name}</>, <>You did not snapshot {icon} {snapshot.name}</>)}
+                      {Info}
+                      <span>{icon} {snapshot.name}: {hl(`${uptimePercent}%`)} uptime</span>
                     </div>
                   )
                 })}
-                {booleanCheck(window.snapshotted_synapse, "You snapshotted Synapse Springs", "You did not snapshot Synapse Springs")}
-                {booleanCheck(window.snapshotted_potion, "You snapshotted your Potion of Mogu Power", "You did not snapshot your Potion of Mogu Power")}
-                {booleanCheck(window.snapshotted_fc, "You snapshotted Fallen Crusader", "You did not snapshot Fallen Crusader")}
-                {window.snapshotted_bloodfury !== null && booleanCheck(window.snapshotted_bloodfury, "You snapshotted Blood Fury", "You did not snapshot Blood Fury")}
+                <div>
+                  {Info}
+                  <span>Synapse Springs: {hl(`${window.synapse_springs_uptime > 0 ? (((window.synapse_springs_uptime || 0) / (window.end - window.start)) * 100).toFixed(1) : 0}%`)} uptime</span>
+                </div>
+                <div>
+                  {Info}
+                  <span>Potion of Mogu Power: {hl(`${window.potion_uptime > 0 ? (((window.potion_uptime || 0) / (window.end - window.start)) * 100).toFixed(1) : 0}%`)} uptime</span>
+                </div>
+                <div>
+                  {Info}
+                  <span>Fallen Crusader: {hl(`${window.fallen_crusader_uptime > 0 ? (((window.fallen_crusader_uptime || 0) / (window.end - window.start)) * 100).toFixed(1) : 0}%`)} uptime</span>
+                </div>
+                {window.snapshotted_bloodfury !== null && (
+                  <div>
+                    {Info}
+                    <span>Blood Fury: {hl(`${window.bloodfury_uptime > 0 ? (((window.bloodfury_uptime || 0) / (window.end - window.start)) * 100).toFixed(1) : 0}%`)} uptime</span>
+                  </div>
+                )}
               </div>
             )
           })}
