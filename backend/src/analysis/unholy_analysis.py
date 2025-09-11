@@ -482,11 +482,53 @@ class GargoyleWindow(Window):
         self.start = start
         self.end = min(start + 30000, fight_duration)
         self._gargoyle_first_cast = None
-        self.snapshotted_synapse = buff_tracker.is_active("Synapse Springs", start)
-        self.snapshotted_fc = buff_tracker.is_active("Unholy Strength", start)
-        self.snapshotted_potion = buff_tracker.is_active("Potion of Mogu Power", start)
-        self.snapshotted_bloodfury = (
-            buff_tracker.is_active("Blood Fury", start)
+        
+        # Dynamic buff tracking for MoP (instead of snapshot)
+        self._synapse_springs_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Synapse Springs",
+                self.start,
+                max_duration=10000 - 25,
+            )
+            if buff_tracker.has_synapse_springs
+            else None
+        )
+        self._fallen_crusader_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Unholy Strength",
+                self.start,
+                max_duration=15000 - 25,
+            )
+            if buff_tracker.has_fallen_crusader
+            else None
+        )
+        self._potion_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Potion of Mogu Power",
+                self.start,
+                max_duration=25000 - 25,
+            )
+            if buff_tracker.has_potion
+            else None
+        )
+        self._bloodfury_uptime = (
+            BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                "Blood Fury",
+                self.start,
+                max_duration=15000 - 25,
+            )
             if buff_tracker.has_bloodfury
             else None
         )
@@ -495,28 +537,80 @@ class GargoyleWindow(Window):
         self.num_casts = 0
         self.total_damage = 0
         self._items = items
-        self._snapshottable_trinkets = []
-        self._uptime_trinkets = []
-        self.trinket_snapshots = []
+        self._all_trinkets = []
+        self.trinket_uptimes = []
 
+        # In MoP, all trinkets use dynamic tracking (no more snapshot)
         for trinket in self._items.trinkets:
             if trinket.snapshots_gargoyle:
-                self._snapshottable_trinkets.append(trinket)
-            else:
-                self._uptime_trinkets.append(trinket)
+                self._all_trinkets.append(trinket)
 
-        for snapshottable_trinket in self._snapshottable_trinkets:
-            self.trinket_snapshots.append(
-                {
-                    "trinket": snapshottable_trinket,
-                    "did_snapshot": buff_tracker.is_active(
-                        snapshottable_trinket.buff_name, start
-                    ),
-                }
+        for trinket in self._all_trinkets:
+            uptime = BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                trinket.buff_name,
+                self.start,
+                max_duration=trinket.proc_duration - 25,
             )
+            self.trinket_uptimes.append({
+                "trinket": trinket,
+                "uptime": uptime,
+            })
 
     def _set_gargoyle_first_cast(self, event):
         self._gargoyle_first_cast = event["timestamp"]
+
+    # Properties for frontend compatibility - now showing uptime instead of snapshot
+    @property
+    def synapse_springs_uptime(self):
+        return self._synapse_springs_uptime.uptime() if self._synapse_springs_uptime else 0
+
+    @property
+    def fallen_crusader_uptime(self):
+        return self._fallen_crusader_uptime.uptime() if self._fallen_crusader_uptime else 0
+
+    @property
+    def potion_uptime(self):
+        return self._potion_uptime.uptime() if self._potion_uptime else 0
+
+    @property
+    def bloodfury_uptime(self):
+        return self._bloodfury_uptime.uptime() if self._bloodfury_uptime else 0
+
+    # Legacy property names for frontend compatibility (but now using uptime > 0)
+    @property
+    def snapshotted_synapse(self):
+        return self.synapse_springs_uptime > 0
+
+    @property
+    def snapshotted_fc(self):
+        return self.fallen_crusader_uptime > 0
+
+    @property
+    def snapshotted_potion(self):
+        return self.potion_uptime > 0
+
+    @property
+    def snapshotted_bloodfury(self):
+        if self._bloodfury_uptime is None:
+            return None
+        return self.bloodfury_uptime > 0
+
+    @property
+    def trinket_snapshots(self):
+        # Convert trinket uptimes to snapshot-style format for frontend compatibility
+        return [
+            {
+                "trinket": trinket_data["trinket"],
+                "name": trinket_data["trinket"].name,
+                "icon": trinket_data["trinket"].icon,
+                "did_snapshot": trinket_data["uptime"].uptime() > 0,
+                "uptime": trinket_data["uptime"].uptime(),
+            }
+            for trinket_data in self.trinket_uptimes
+        ]
 
     def add_event(self, event):
         if event["source"] == "Ebon Gargoyle":
@@ -535,24 +629,25 @@ class GargoyleWindow(Window):
             self.total_damage += event["amount"]
 
     def score(self):
+        # MoP uses dynamic tracking - score based on uptime percentage
+        gargoyle_duration = self.end - self.start  # 30 seconds max
+        
         return ScoreWeight.calculate(
-            ScoreWeight(int(self.snapshotted_synapse), 2),
-            ScoreWeight(int(self.snapshotted_fc), 3),
-            ScoreWeight(int(self.snapshotted_potion), 3),
-            # Lower weight since this only lasts 12s
+            ScoreWeight(self.synapse_springs_uptime / gargoyle_duration, 2),
+            ScoreWeight(self.fallen_crusader_uptime / gargoyle_duration, 3),
+            ScoreWeight(self.potion_uptime / gargoyle_duration, 3),
+            # Performance score based on casts (max ~18 casts in 30s)
             ScoreWeight(self.num_casts / 18, 4),
+            # Trinket uptime score
             ScoreWeight(
-                len([t for t in self.trinket_snapshots if t["did_snapshot"]])
-                / (len(self.trinket_snapshots) if self.trinket_snapshots else 1),
+                sum(t["uptime"] for t in self.trinket_snapshots) / 
+                (gargoyle_duration * len(self.trinket_snapshots)) if self.trinket_snapshots else 0,
                 len(self.trinket_snapshots) * 2,
             ),
+            # Blood Fury uptime score  
             ScoreWeight(
-                (
-                    int(self.snapshotted_bloodfury)
-                    if self.snapshotted_bloodfury is not None
-                    else 0
-                ),
-                2 if self.snapshotted_bloodfury is not None else 0,
+                self.bloodfury_uptime / gargoyle_duration if self._bloodfury_uptime else 0,
+                2 if self._bloodfury_uptime else 0,
             ),
         )
 
