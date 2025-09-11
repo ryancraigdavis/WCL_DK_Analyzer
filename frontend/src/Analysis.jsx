@@ -9,6 +9,7 @@ import { ArmyAnalysis } from "./ArmyAnalysis.jsx"
 import { GargoyleAnalysis } from "./GargoyleAnalysis"
 import { DarkTransformationAnalysis } from "./DarkTransformationAnalysis"
 import { GhoulAnalysis } from "./GhoulAnalysis.jsx"
+import { SoulReaperAnalysis } from "./SoulReaperAnalysis.jsx"
 import { formatCPM, formatIcon, formatTimestamp, formatUpTime, formatUsage, Tooltip } from "./helpers"
 
 const formatRune = (rune, i) => {
@@ -407,6 +408,11 @@ const Summary = () => {
         {summary.gargoyle && (
           <div className="analysis-section">
             <GargoyleAnalysis gargoyle={summary.gargoyle} />
+          </div>
+        )}
+        {summary.soul_reaper && (
+          <div className="analysis-section">
+            <SoulReaperAnalysis soulReaper={summary.soul_reaper} />
           </div>
         )}
         {summary.army && (
