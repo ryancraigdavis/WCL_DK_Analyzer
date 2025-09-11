@@ -1,6 +1,5 @@
 from analysis.base import AnalysisScorer, BaseAnalyzer, Window
 from analysis.core_analysis import (
-    BombAnalyzer,
     BuffTracker,
     CoreAnalysisConfig,
     DiseaseAnalyzer,
@@ -422,9 +421,6 @@ class FrostAnalysisScorer(AnalysisScorer):
             },
             BuffTracker: {
                 "weight": 1,
-            },
-            BombAnalyzer: {
-                "weight": 2,
             },
             SynapseSpringsAnalyzer: {
                 "weight": 1,

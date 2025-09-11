@@ -108,7 +108,7 @@ class Analyzer:
                     "Polarization",
                     "King of Boars",
                     "Fatality",
-                    "Golem's Strength",
+                    "Potion of Mogu Power",
                     "Rime",
                     "Synapse Springs",
                     "Sudden Doom",
@@ -124,8 +124,9 @@ class Analyzer:
                     "Smoldering Rune",  # T12 2pc
                     "Runic Corruption",
                     "Unholy Frenzy",
-                    "Flask of Titanic Strength",
-                    "Flask of Battle",
+                    "Flask of Winter's Bite",
+                    "Flask of Falling Leaves",
+                    "Well Fed",  # MoP food buffs
                     "Blood Presence",
                     "Unholy Presence",
                     "Frost Presence",

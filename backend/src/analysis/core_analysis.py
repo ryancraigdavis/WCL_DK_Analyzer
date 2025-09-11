@@ -797,13 +797,12 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
 
     @property
     def has_flask(self):
-        # WCL is not reporting this accurate so for the sake of argument, setting to true
-        return True
-        # return bool(self._num_windows("Flask of Titanic Strength")) or bool(self._num_windows("Flask of Battle"))
+        # Check for MoP flasks that DKs would use
+        return bool(self._num_windows("Flask of Winter's Bite")) or bool(self._num_windows("Flask of Falling Leaves"))
 
     @property
     def num_pots(self):
-        return self._num_windows("Golem's Strength")
+        return self._num_windows("Potion of Mogu Power")
 
     @property
     def has_bl(self):
@@ -819,7 +818,11 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
 
     @property
     def has_potion(self):
-        return bool(self._num_windows("Golem's Strength"))
+        return bool(self._num_windows("Potion of Mogu Power"))
+
+    @property
+    def has_food(self):
+        return bool(self._num_windows("Well Fed"))
 
     @property
     def has_fatality(self):
@@ -878,9 +881,9 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
                             presence_windows.pop()
                 windows.add_window(0)
         elif event["type"] == "applybuff":
-            if event["ability"] in ("Golem's Strength"):
-                if self.is_active("Golem's Strength", event["timestamp"]):
-                    self._buff_windows["Golem's Strength"].pop()
+            if event["ability"] in ("Potion of Mogu Power"):
+                if self.is_active("Potion of Mogu Power", event["timestamp"]):
+                    self._buff_windows["Potion of Mogu Power"].pop()
 
             if not windows.has_active_window:
                 windows.add_window(event["timestamp"])
@@ -917,6 +920,9 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
         ret = {
             "flask_usage": {
                 "has_flask": self.has_flask,
+            },
+            "food_usage": {
+                "has_food": self.has_food,
             },
             "potions_used": self.num_pots,
         }
@@ -1024,11 +1030,8 @@ class GCDAnalyzer(BaseAnalyzer):
     NO_GCD = {
         "Pillar of Frost",
         "Blood Tap",
-        "Global Thermal Sapper Charge",
-        "Saronite Bomb",
-        "Golem's Strength",
+        "Potion of Mogu Power",
         "Empower Rune Weapon",
-        "Cobalt Frag Bomb",
         "Synapse Springs",
         "Blood Fury",
         "Berserking",
@@ -1208,62 +1211,6 @@ class TalentPreprocessor(BasePreprocessor):
         event["disease_duration"] = self._disease_duration
 
 
-class BombAnalyzer(BaseAnalyzer):
-    def __init__(self, fight_duration):
-        self._fight_duration = fight_duration
-        self._num_thermals = 0
-        self._num_saronites = 0
-        self._num_big_daddys = 0
-        self._num_explosive_bolts = 0
-
-    def add_event(self, event):
-        if event["type"] != "cast":
-            return
-
-        if event["ability"] == "Global Thermal Sapper Charge":
-            self._num_thermals += 1
-
-        if event["ability"] == "Saronite Bomb":
-            self._num_saronites += 1
-
-        if event["ability"] == "Big Daddy":
-            self._num_big_daddys += 1
-
-        if event["ability"] == "Explosive Bolts":
-            self._num_explosive_bolts += 1
-
-    @property
-    def possible_thermals(self):
-        return max(1 + self._fight_duration // 305000, self._num_thermals)
-
-    @property
-    def possible_saronites(self):
-        return max(
-            1 + self._fight_duration // 65000 - self.possible_thermals,
-            self._num_saronites,
-        )
-
-    def score(self):
-        score_thermal = (
-            self._num_thermals / self.possible_thermals if self.possible_thermals else 1
-        )
-        score_saronite = (
-            self._num_saronites / self.possible_saronites
-            if self.possible_saronites
-            else 1
-        )
-        # Thermal does more than 2x saronite
-        return score_thermal * 0.6 + score_saronite * 0.4
-
-    def report(self):
-        return {
-            "bomb_usage": {
-                "thermal_possible": self.possible_thermals,
-                "thermal_actual": self._num_thermals,
-                "saronite_possible": self.possible_saronites,
-                "saronite_actual": self._num_saronites,
-            }
-        }
 
 
 class SynapseSpringsAnalyzer(BaseAnalyzer):
@@ -1495,9 +1442,6 @@ class CoreAnalysisScorer(AnalysisScorer):
             BuffTracker: {
                 "weight": 1,
             },
-            BombAnalyzer: {
-                "weight": 2,
-            },
             SynapseSpringsAnalyzer: {
                 "weight": 2,
             },
@@ -1526,7 +1470,6 @@ class CoreAnalysisConfig:
             GCDAnalyzer(fight.source.id, buff_tracker),
             RPAnalyzer(),
             CoreAbilities(),
-            BombAnalyzer(fight.duration),
             SynapseSpringsAnalyzer(fight.duration),
             MeleeUptimeAnalyzer(fight.duration, dead_zone_analyzer.get_dead_zones()),
             TrinketAnalyzer(fight.duration, items),

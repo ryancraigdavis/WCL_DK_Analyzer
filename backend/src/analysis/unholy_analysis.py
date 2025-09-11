@@ -13,7 +13,6 @@ from analysis.base import (
     Window,
 )
 from analysis.core_analysis import (
-    BombAnalyzer,
     BuffTracker,
     CoreAnalysisConfig,
     SynapseSpringsAnalyzer,
@@ -188,7 +187,7 @@ class DarkTransformationWindow(Window):
                 self.end,
                 buff_tracker,
                 ignore_windows,
-                "Golem's Strength",
+                "Potion of Mogu Power",
                 self.start,
                 max_duration=25000 - 25,
             )
@@ -485,7 +484,7 @@ class GargoyleWindow(Window):
         self._gargoyle_first_cast = None
         self.snapshotted_synapse = buff_tracker.is_active("Synapse Springs", start)
         self.snapshotted_fc = buff_tracker.is_active("Unholy Strength", start)
-        self.snapshotted_potion = buff_tracker.is_active("Golem's Strength", start)
+        self.snapshotted_potion = buff_tracker.is_active("Potion of Mogu Power", start)
         self.snapshotted_bloodfury = (
             buff_tracker.is_active("Blood Fury", start)
             if buff_tracker.has_bloodfury
@@ -939,9 +938,6 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "exponent_factor": exponent_factor,
             },
             BuffTracker: {
-                "weight": 1,
-            },
-            BombAnalyzer: {
                 "weight": 1,
             },
             SynapseSpringsAnalyzer: {

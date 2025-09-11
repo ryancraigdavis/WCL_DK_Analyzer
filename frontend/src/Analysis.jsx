@@ -113,14 +113,33 @@ const Summary = () => {
       return (
         <div className={"flask-usage"}>
           <i className="fa fa-check green" aria-hidden="true"></i>
-          You had a Flask of Titanic Strength
+          You had a Flask (Winter's Bite or Falling Leaves)
         </div>
       );
     }
     return (
       <div className={"flask-usage"}>
         <i className="fa fa-times red" aria-hidden="true"></i>
-        You did not have a Flask of Titanic Strength
+        You did not have a Flask (Winter's Bite or Falling Leaves)
+      </div>
+    );
+  }, []);
+
+  const formatFood = useCallback((foodUsage) => {
+    const hasFood = foodUsage.has_food;
+
+    if (hasFood) {
+      return (
+        <div className={"food-usage"}>
+          <i className="fa fa-check green" aria-hidden="true"></i>
+          You had Food Buff (+300 STR)
+        </div>
+      );
+    }
+    return (
+      <div className={"food-usage"}>
+        <i className="fa fa-times red" aria-hidden="true"></i>
+        You did not have Food Buff (+300 STR)
       </div>
     );
   }, []);
@@ -181,14 +200,14 @@ const Summary = () => {
       return (
         <div className={"potions"}>
           <i className="fa fa-check green" aria-hidden="true"></i>
-          You used <span className={"hl"}>{potionsUsed} of {total}</span> Potions (Golem's Blood)
+          You used <span className={"hl"}>{potionsUsed} of {total}</span> Potions (Mogu Power)
         </div>
       );
     }
     return (
       <div className={"potions"}>
         <i className="fa fa-times red" aria-hidden="true"></i>
-        You used <span className={"hl"}>{potionsUsed} of 2</span> Potions (Golem's Blood)
+        You used <span className={"hl"}>{potionsUsed} of 2</span> Potions (Mogu Power)
       </div>
     );
   }, []);
@@ -412,17 +431,8 @@ const Summary = () => {
             "Synapse Springs",
           )}
           {summary.potion_usage && formatPotions(summary.potion_usage)}
-          {summary.bomb_usage && formatUsage(
-            summary.bomb_usage.thermal_actual,
-            summary.bomb_usage.thermal_possible,
-            "Global Thermal Sapper Charge",
-          )}
-          {summary.bomb_usage && formatUsage(
-            summary.bomb_usage.saronite_actual,
-            summary.bomb_usage.saronite_possible,
-            "Saronite Bomb",
-          )}
         {summary.flask_usage && formatFlask(summary.flask_usage)}
+        {summary.food_usage && formatFood(summary.food_usage)}
         </div>
       </div>
     </div>
