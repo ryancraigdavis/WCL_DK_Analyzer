@@ -50,7 +50,7 @@ export const DarkTransformationAnalysis = ({ dark_transformation }) => {
                 )}
                 {window.potion_uptime !== 0 && (
                   <div>
-                    {formatUpTime(window.potion_uptime, "Golem's Strength (Potion)")}
+                    {formatUpTime(window.potion_uptime, "Potion of Mogu Power")}
                   </div>
                 )}
                 {window.unholy_frenzy_uptime !== 0 && (
