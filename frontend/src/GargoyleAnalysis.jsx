@@ -1,4 +1,4 @@
-import {formatIcon, formatTimestamp, formatUsage, hl, Info} from "./helpers"
+import {formatIcon, formatTimestamp, formatUpTime, formatUsage, hl, Info} from "./helpers"
 
 
 export const GargoyleAnalysis = ({ gargoyle }) => {
@@ -23,34 +23,33 @@ export const GargoyleAnalysis = ({ gargoyle }) => {
                   {Info}
                   <span>Damage: {hl(window.damage.toLocaleString())} ({hl(numCast)} casts, {hl(numMelee)} melees)</span>
                 </div>
-                {window.trinket_snapshots.map((snapshot, i) => {
-                  const icon = formatIcon(snapshot.name, snapshot.icon)
-                  const gargoyleDuration = window.end - window.start
-                  const uptimePercent = gargoyleDuration > 0 ? ((snapshot.uptime / gargoyleDuration) * 100).toFixed(1) : 0
-
-                  return (
-                    <div key={i}>
-                      {Info}
-                      <span>{icon} {snapshot.name}: {hl(`${uptimePercent}%`)} uptime</span>
-                    </div>
-                  )
-                })}
+                {window.trinket_snapshots
+                  .filter(snapshot => snapshot.uptime !== 0)
+                  .map((snapshot, i) => {
+                    const icon = formatIcon(snapshot.name, snapshot.icon)
+                    return (
+                      <div key={i}>
+                        {formatUpTime(snapshot.uptime, <>{icon} {snapshot.name}</>)}
+                      </div>
+                    )
+                  })
+                }
                 <div>
-                  {Info}
-                  <span>Synapse Springs: {hl(`${window.synapse_springs_uptime > 0 ? (((window.synapse_springs_uptime || 0) / (window.end - window.start)) * 100).toFixed(1) : 0}%`)} uptime</span>
+                  {formatUpTime(window.fallen_crusader_uptime, "Fallen Crusader")}
                 </div>
-                <div>
-                  {Info}
-                  <span>Potion of Mogu Power: {hl(`${window.potion_uptime > 0 ? (((window.potion_uptime || 0) / (window.end - window.start)) * 100).toFixed(1) : 0}%`)} uptime</span>
-                </div>
-                <div>
-                  {Info}
-                  <span>Fallen Crusader: {hl(`${window.fallen_crusader_uptime > 0 ? (((window.fallen_crusader_uptime || 0) / (window.end - window.start)) * 100).toFixed(1) : 0}%`)} uptime</span>
-                </div>
-                {window.snapshotted_bloodfury !== null && (
+                {window.synapse_springs_uptime !== 0 && (
                   <div>
-                    {Info}
-                    <span>Blood Fury: {hl(`${window.bloodfury_uptime > 0 ? (((window.bloodfury_uptime || 0) / (window.end - window.start)) * 100).toFixed(1) : 0}%`)} uptime</span>
+                    {formatUpTime(window.synapse_springs_uptime, "Synapse Springs")}
+                  </div>
+                )}
+                {window.potion_uptime !== 0 && (
+                  <div>
+                    {formatUpTime(window.potion_uptime, "Potion of Mogu Power")}
+                  </div>
+                )}
+                {window.bloodfury_uptime !== 0 && (
+                  <div>
+                    {formatUpTime(window.bloodfury_uptime, "Blood Fury")}
                   </div>
                 )}
               </div>
