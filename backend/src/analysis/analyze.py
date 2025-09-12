@@ -4,6 +4,7 @@ from analysis.core_analysis import (
     DeadZoneAnalyzer,
     TalentPreprocessor,
     BuffTracker,
+    DebuffTracker,
     PetNameDetector,
     RuneHasteTracker,
 )
@@ -37,6 +38,7 @@ class Analyzer:
         dead_zone_analyzer = self._get_dead_zone_analyzer()
         talent_preprocessor = self._get_talent_preprocessor()
         buff_tracker = self._get_buff_tracker()
+        debuff_tracker = self._get_debuff_tracker()
         source_id = self._fight.source.id
         pet_analyzer = PetNameDetector()
         items = self._get_item_preprocessor()
@@ -47,6 +49,7 @@ class Analyzer:
                 dead_zone_analyzer.preprocess_event(event)
                 talent_preprocessor.preprocess_event(event)
                 buff_tracker.preprocess_event(event)
+                debuff_tracker.preprocess_event(event)
                 items.preprocess_event(event)
 
             # Pet analyzers
@@ -56,6 +59,7 @@ class Analyzer:
         for event in self._events:
             dead_zone_analyzer.decorate_event(event)
             buff_tracker.decorate_event(event)
+            debuff_tracker.decorate_event(event)
             talent_preprocessor.decorate_event(event)
             items.decorate_event(event)
             pet_analyzer.decorate_event(event)
@@ -137,6 +141,10 @@ class Analyzer:
                 self._detect_spec(),
             )
         return self._buff_tracker
+
+    def _get_debuff_tracker(self):
+        source_id = self._fight.source.id
+        return DebuffTracker(self._fight.duration, source_id)
 
     def _detect_spec(self):
         if not self.__spec:

@@ -577,6 +577,9 @@ export const Analysis = () => {
         <td>
           <div className={"buffs"}>{event.buffs.map(formatBuff)}</div>
         </td>
+        <td>
+          <div className={"debuffs"}>{(event.debuffs || []).map(formatBuff)}</div>
+        </td>
         {showProcs &&
           <td>
             <div className={"procs-used"}>{procsUsed.map(formatBuff)}</div>
@@ -632,6 +635,7 @@ export const Analysis = () => {
                 </>
               )}
               <th>Buffs</th>
+              <th>Debuffs</th>
               {data.show_procs && <th>Procs Used</th>}
             </tr>
           </thead>
