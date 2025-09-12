@@ -483,55 +483,47 @@ class GargoyleWindow(Window):
         self.end = min(start + 30000, fight_duration)
         self._gargoyle_first_cast = None
         
-        # Dynamic buff tracking for MoP (instead of snapshot)
-        self._synapse_springs_uptime = (
-            BuffUptimeAnalyzer(
-                self.end,
-                buff_tracker,
-                ignore_windows,
-                "Synapse Springs",
-                self.start,
-                max_duration=10000 - 25,
-            )
-            if buff_tracker.has_synapse_springs
-            else None
+        # Dynamic buff tracking for MoP (always create analyzers to show 0% even if buff not present)
+        self._synapse_springs_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Synapse Springs",
+            self.start,
+            max_duration=10000 - 25,
         )
-        self._fallen_crusader_uptime = (
-            BuffUptimeAnalyzer(
-                self.end,
-                buff_tracker,
-                ignore_windows,
-                "Unholy Strength",
-                self.start,
-                max_duration=15000 - 25,
-            )
-            if buff_tracker.has_fallen_crusader
-            else None
+        self._fallen_crusader_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Unholy Strength",
+            self.start,
+            max_duration=15000 - 25,
         )
-        self._potion_uptime = (
-            BuffUptimeAnalyzer(
-                self.end,
-                buff_tracker,
-                ignore_windows,
-                "Potion of Mogu Power",
-                self.start,
-                max_duration=25000 - 25,
-            )
-            if buff_tracker.has_potion
-            else None
+        self._potion_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Potion of Mogu Power",
+            self.start,
+            max_duration=25000 - 25,
         )
-        self._bloodfury_uptime = (
-            BuffUptimeAnalyzer(
-                self.end,
-                buff_tracker,
-                ignore_windows,
-                "Blood Fury",
-                self.start,
-                max_duration=15000 - 25,
-            )
-            if buff_tracker.has_bloodfury
-            else None
+        self._bloodfury_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Blood Fury",
+            self.start,
+            max_duration=15000 - 25,
         )
+
+        # Collect all uptimes for event passing (like Dark Transformation does)
+        self._uptimes = [
+            self._synapse_springs_uptime,
+            self._fallen_crusader_uptime,
+            self._potion_uptime,
+            self._bloodfury_uptime,
+        ]
 
         self.num_melees = 0
         self.num_casts = 0
@@ -554,6 +546,7 @@ class GargoyleWindow(Window):
                 self.start,
                 max_duration=trinket.proc_duration - 25,
             )
+            self._uptimes.append(uptime)
             self.trinket_uptimes.append({
                 "trinket": trinket,
                 "uptime": uptime,
@@ -561,23 +554,26 @@ class GargoyleWindow(Window):
 
     def _set_gargoyle_first_cast(self, event):
         self._gargoyle_first_cast = event["timestamp"]
+        # Set start time for all uptime analyzers when gargoyle first casts (like DT does)
+        for uptime in self._uptimes:
+            uptime.set_start_time(event["timestamp"])
 
-    # Properties for frontend compatibility - now showing uptime instead of snapshot
+    # Properties for frontend compatibility - return uptime as fractions for formatUpTime
     @property
     def synapse_springs_uptime(self):
-        return self._synapse_springs_uptime.uptime() if self._synapse_springs_uptime else 0
+        return self._synapse_springs_uptime.uptime()
 
     @property
     def fallen_crusader_uptime(self):
-        return self._fallen_crusader_uptime.uptime() if self._fallen_crusader_uptime else 0
+        return self._fallen_crusader_uptime.uptime()
 
     @property
     def potion_uptime(self):
-        return self._potion_uptime.uptime() if self._potion_uptime else 0
+        return self._potion_uptime.uptime()
 
     @property
     def bloodfury_uptime(self):
-        return self._bloodfury_uptime.uptime() if self._bloodfury_uptime else 0
+        return self._bloodfury_uptime.uptime()
 
     # Legacy property names for frontend compatibility (but now using uptime > 0)
     @property
@@ -594,8 +590,6 @@ class GargoyleWindow(Window):
 
     @property
     def snapshotted_bloodfury(self):
-        if self._bloodfury_uptime is None:
-            return None
         return self.bloodfury_uptime > 0
 
     @property
@@ -607,12 +601,16 @@ class GargoyleWindow(Window):
                 "name": trinket_data["trinket"].name,
                 "icon": trinket_data["trinket"].icon,
                 "did_snapshot": trinket_data["uptime"].uptime() > 0,
-                "uptime": trinket_data["uptime"].uptime(),
+                "uptime": trinket_data["uptime"].uptime(),  # Return as fraction for formatUpTime
             }
             for trinket_data in self.trinket_uptimes
         ]
 
     def add_event(self, event):
+        # Pass events to all uptime analyzers (like Dark Transformation does)
+        for uptime in self._uptimes:
+            uptime.add_event(event)
+
         if event["source"] == "Ebon Gargoyle":
             if (
                 event["type"] in ("cast", "startcast")
@@ -677,7 +675,9 @@ class GargoyleAnalyzer(BaseAnalyzer):
         if not self._window:
             return
 
-        self._window.add_event(event)
+        # Only process events within the gargoyle window timeframe
+        if event["timestamp"] <= self._window.end:
+            self._window.add_event(event)
 
     @property
     def possible_gargoyles(self):
@@ -711,6 +711,10 @@ class GargoyleAnalyzer(BaseAnalyzer):
                         "snapshotted_potion": window.snapshotted_potion,
                         "snapshotted_fc": window.snapshotted_fc,
                         "snapshotted_bloodfury": window.snapshotted_bloodfury,
+                        "synapse_springs_uptime": window.synapse_springs_uptime,
+                        "potion_uptime": window.potion_uptime,
+                        "fallen_crusader_uptime": window.fallen_crusader_uptime,
+                        "bloodfury_uptime": window.bloodfury_uptime,
                         "num_casts": window.num_casts,
                         "num_melees": window.num_melees,
                         "start": window.start,
@@ -720,6 +724,7 @@ class GargoyleAnalyzer(BaseAnalyzer):
                                 "name": t["trinket"].name,
                                 "did_snapshot": t["did_snapshot"],
                                 "icon": t["trinket"].icon,
+                                "uptime": t["uptime"],
                             }
                             for t in window.trinket_snapshots
                         ],
