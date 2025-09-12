@@ -967,6 +967,143 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
             event["buffs"] = [buff for buff in event["buffs"] if buff not in presences]
 
 
+class DebuffWindows:
+    def __init__(self, debuff_name, debuff_id, icon):
+        self.debuff_name = debuff_name
+        self.debuff_id = debuff_id
+        self.icon = icon
+        self._windows = []
+
+    @property
+    def has_window(self):
+        return len(self._windows) > 0
+
+    @property
+    def has_active_window(self):
+        return self.has_window and self._windows[-1].end is None
+
+    @property
+    def active_window(self):
+        if not self.has_window:
+            return None
+        return self._windows[-1]
+
+    @property
+    def windows(self):
+        return self._windows
+
+    @property
+    def num_windows(self):
+        return len(self._windows)
+
+    def pop(self):
+        return self._windows.pop()
+
+    def add_window(self, start, end=None):
+        self._windows.append(Window(start, end))
+
+    def contains(self, timestamp):
+        for window in self._windows:
+            if window.contains(timestamp):
+                return True
+        return False
+
+    def containing_window(self, timestamp):
+        for window in self._windows:
+            if window.contains(timestamp):
+                return window
+        return None
+
+
+class DebuffTracker(BaseAnalyzer, BasePreprocessor):
+    def __init__(self, end_time, source_id):
+        self._end_time = end_time
+        self._source_id = source_id
+        self._debuff_windows = {}
+
+    def _get_debuff_windows(self, debuff_name, debuff_id, icon):
+        return self._debuff_windows.setdefault(
+            debuff_name,
+            DebuffWindows(debuff_name, debuff_id, icon),
+        )
+
+    def _num_windows(self, debuff_name):
+        if debuff_name not in self._debuff_windows:
+            return 0
+        return self._debuff_windows[debuff_name].num_windows
+
+    def get_windows(self, debuff_name):
+        if debuff_name not in self._debuff_windows:
+            return []
+
+        windows = self._debuff_windows[debuff_name].windows
+        if windows and windows[-1].end is None:
+            windows[-1] = Window(windows[-1].start, self._end_time)
+        return windows
+
+    def preprocess_event(self, event):
+        # Only process debuff events
+        if event["type"] not in (
+            "applydebuff",
+            "removedebuff",
+            "removedebuffstack", 
+            "refreshdebuff",
+        ):
+            return
+
+        # Only track debuffs applied TO the player we're analyzing
+        if event.get("targetID") != self._source_id:
+            return
+
+        # Skip self-inflicted debuffs (like Death and Decay)
+        if event.get("sourceID") == self._source_id:
+            return
+
+        windows = self._get_debuff_windows(
+            event["ability"],
+            event["abilityGameID"],
+            event["ability_icon"],
+        )
+
+        if event["type"] in ("refreshdebuff"):
+            # If we don't have a window, assume it was already applied
+            if not windows.has_window:
+                windows.add_window(0)
+        elif event["type"] == "applydebuff":
+            if not windows.has_active_window:
+                windows.add_window(event["timestamp"])
+        elif event["type"] in ("removedebuff", "removedebuffstack"):
+            end = event["timestamp"]
+            if windows.has_active_window:
+                windows.active_window.end = end
+
+    def get_active_debuffs(self, timestamp):
+        windows = []
+
+        for debuff, debuff_windows in self._debuff_windows.items():
+            containing_window = debuff_windows.containing_window(timestamp)
+
+            if containing_window:
+                windows.append(
+                    {
+                        "ability": debuff,
+                        "ability_icon": debuff_windows.icon,
+                        "abilityGameID": debuff_windows.debuff_id,
+                        "start": containing_window.start,
+                    }
+                )
+        return sorted(windows, key=lambda x: x["start"])
+
+    def decorate_event(self, event):
+        event["debuffs"] = self.get_active_debuffs(event["timestamp"])
+
+    def score(self):
+        return 1
+
+    def report(self):
+        return {}
+
+
 class PetNameDetector(BasePreprocessor):
     INCLUDE_PET_EVENTS = True
 
