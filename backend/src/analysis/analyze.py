@@ -12,7 +12,7 @@ from analysis.frost_analysis import (
     FrostAnalysisConfig,
 )
 from analysis.items import ItemPreprocessor, TrinketPreprocessor
-from analysis.unholy_analysis import UnholyAnalysisConfig
+from analysis.unholy_analysis import UnholyAnalysisConfig, FesteringStrikeTracker
 from report import Fight, Report
 
 
@@ -33,6 +33,7 @@ class Analyzer:
         )()
         self._buff_tracker = None
         self.runes = None
+        self._analyzers = []  # Store analyzers to access their results later
 
     def _preprocess_events(self):
         dead_zone_analyzer = self._get_dead_zone_analyzer()
@@ -200,6 +201,7 @@ class Analyzer:
         """Remove any events we don't care to show in the UI"""
         events = []
 
+        # First add the regular events
         for event in self._events:
             if event["sourceID"] == self._fight.source.id and (
                 (event["type"] == "cast" and event["ability"] not in ("Speed", "Melee"))
@@ -230,6 +232,34 @@ class Analyzer:
                 )
             ):
                 events.append(event)
+
+        # Add death rune waste events from FesteringStrikeTracker
+        if hasattr(self, '_analyzers'):
+            for analyzer in self._analyzers:
+                if isinstance(analyzer, FesteringStrikeTracker):
+                    for waste_event in analyzer.death_rune_waste_events:
+                        # Create a timeline event similar to disease drops
+                        timeline_event = {
+                            "timestamp": waste_event["timestamp"],
+                            "type": "death_rune_waste",
+                            "ability": waste_event["ability"],
+                            "sourceID": self._fight.source.id,
+                            "targetID": self._fight.source.id,
+                            "death_runes_wasted": waste_event["death_runes_wasted"],
+                            "message": waste_event["message"],
+                            "buffs": [],  # Will be decorated later
+                            "debuffs": [],  # Will be decorated later
+                            "runes_before": [],  # Empty runes for display events
+                            "runes": [],  # Empty runes for display events
+                            "runic_power": 0,  # Default RP
+                            "modifies_runes": False,  # Don't show rune changes
+                            "has_gcd": False,  # Not a GCD event
+                            "ability_type": 0,  # Default ability type
+                        }
+                        events.append(timeline_event)
+
+        # Sort all events by timestamp
+        events.sort(key=lambda x: x["timestamp"])
         return events
 
     def analyze(self):
@@ -249,6 +279,7 @@ class Analyzer:
             )
         )
         analyzers.append(self._analysis_config.get_scorer(analyzers))
+        self._analyzers = analyzers  # Store for access in displayable_events
 
         source_id = self._fight.source.id
         for event in self._events:
