@@ -296,6 +296,29 @@ const Summary = () => {
     )
   }, [])
 
+  const formatFesteringStrikeWaste = useCallback(festeringStrikeWaste => {
+    const oneDeathRune = festeringStrikeWaste.one_death_rune_casts
+    const twoDeathRune = festeringStrikeWaste.two_death_rune_casts
+    const totalWasted = festeringStrikeWaste.total_death_runes_wasted
+
+    let icon = <i className="fa fa-check green" aria-hidden="true"></i>
+    if (totalWasted > 5) {
+      icon = <i className="fa fa-times red" aria-hidden="true"></i>
+    } else if (totalWasted > 2) {
+      icon = <i className="fa fa-warning yellow" aria-hidden="true"></i>
+    }
+
+    return (
+      <div className={"festering-strike-waste"}>
+        {icon}
+        Festering Strike wasted <span className={"hl"}>{totalWasted}</span> death runes
+        {totalWasted > 0 && (
+          <span> (<span className={"hl"}>{oneDeathRune}</span> × 1DR, <span className={"hl"}>{twoDeathRune}</span> × 2DR)</span>
+        )}
+      </div>
+    )
+  }, [])
+
   const formatScore = useCallback(score => {
     let color = "red"
     if (score > 0.8) {
@@ -389,6 +412,7 @@ const Summary = () => {
           {summary.frost_fever_uptime !== undefined && formatUpTime(summary.frost_fever_uptime, "Frost Fever")}
           {summary.unholy_presence_uptime !== undefined && formatUpTime(summary.unholy_presence_uptime, "Unholy Presence")}
           {summary.blood_tap_usages !== undefined && formatUsage(summary.blood_tap_usages, summary.blood_tap_max_usages, "Blood Tap")}
+          {summary.festering_strike_waste && formatFesteringStrikeWaste(summary.festering_strike_waste)}
           {summary.diseases_dropped && formatDiseases(summary.diseases_dropped)}
           {summary.raise_dead_usage && formatUsage(summary.raise_dead_usage.num_usages, summary.raise_dead_usage.possible_usages, "Raise Dead")}
           {summary.howling_blast_bad_usages && formatHowlingBlast(summary.howling_blast_bad_usages)}
@@ -450,14 +474,14 @@ export const Analysis = () => {
 
   const formatEvent = useCallback((event, showRunes, showProcs, i) => {
     const abilityIcon = event.ability_icon;
-    const icon = (
+    const icon = abilityIcon ? (
       <img
         src={abilityIcon}
         title={event.ability}
         alt={event.ability}
         width={20}
       />
-    );
+    ) : null;
     const offset = event.gcd_offset;
     let ability = event.ability;
     let timestamp = <span>{formatTimestamp(event.timestamp)}</span>;
@@ -487,6 +511,11 @@ export const Analysis = () => {
     if (event.type === "removebuff") {
       abilityTdClass = "buff-drops";
       ability = `${ability} ends`;
+    }
+
+    if (event.type === "death_rune_waste") {
+      abilityTdClass = "death-rune-waste";
+      ability = `${ability} wasted ${event.death_runes_wasted} death rune${event.death_runes_wasted > 1 ? 's' : ''}`;
     }
 
     if (event.is_miss) {

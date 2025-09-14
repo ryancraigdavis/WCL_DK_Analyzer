@@ -778,6 +778,85 @@ class DeathAndDecayUptimeAnalyzer(BaseAnalyzer):
         }
 
 
+class FesteringStrikeTracker(BaseAnalyzer):
+    def __init__(self):
+        self.one_death_rune_casts = 0
+        self.two_death_rune_casts = 0
+        self.death_rune_waste_events = []  # For timeline entries
+
+    def add_event(self, event):
+        if event["type"] == "cast" and event["ability"] == "Festering Strike":
+            # Check rune state before cast
+            runes_before = event.get("runes_before", [])
+
+            if not runes_before:
+                return  # Can't analyze without rune state
+
+            # Check if player has Bloodlust/Heroism/Time Warp - skip analysis during these periods
+            active_buffs = event.get("buffs", [])
+            has_haste_buff = any(
+                buff["ability"] in ("Bloodlust", "Heroism", "Time Warp")
+                for buff in active_buffs
+            )
+
+            if has_haste_buff:
+                return  # Don't count FS waste during major haste buffs
+
+            # Check what was available before cast
+            blood_available = sum(1 for rune in runes_before if rune["name"] == "Blood" and rune["is_available"])
+            frost_available = sum(1 for rune in runes_before if rune["name"] == "Frost" and rune["is_available"])
+            death_available = sum(1 for rune in runes_before if rune["name"] == "Death" and rune["is_available"])
+
+            # Player decision analysis: Should they have waited for Blood+Frost?
+            if blood_available < 1 or frost_available < 1:
+                # Player cast FS when Blood+Frost weren't both available
+                # Game will be forced to use death runes, which is suboptimal
+
+                if blood_available < 1 and frost_available < 1:
+                    # No Blood, no Frost - will use 2 death runes
+                    self.two_death_rune_casts += 1
+                    self.death_rune_waste_events.append({
+                        "timestamp": event["timestamp"],
+                        "type": "death_rune_waste",
+                        "ability": "Festering Strike",
+                        "death_runes_wasted": 2,
+                        "message": f"Festering Strike cast with no Blood or Frost available (will use 2 death runes)"
+                    })
+                else:
+                    # Missing either Blood or Frost - will use 1 death rune
+                    missing = "Blood" if blood_available < 1 else "Frost"
+                    self.one_death_rune_casts += 1
+                    self.death_rune_waste_events.append({
+                        "timestamp": event["timestamp"],
+                        "type": "death_rune_waste",
+                        "ability": "Festering Strike",
+                        "death_runes_wasted": 1,
+                        "message": f"Festering Strike cast without {missing} rune available (will use 1 death rune)"
+                    })
+            # If both Blood+Frost were available, this is optimal - no waste
+
+    def score(self):
+        total_waste = self.one_death_rune_casts + (self.two_death_rune_casts * 2)
+        if total_waste == 0:
+            return 1.0
+        elif total_waste <= 2:
+            return 0.8
+        elif total_waste <= 5:
+            return 0.6
+        else:
+            return 0.3
+
+    def report(self):
+        return {
+            "festering_strike_waste": {
+                "one_death_rune_casts": self.one_death_rune_casts,
+                "two_death_rune_casts": self.two_death_rune_casts,
+                "total_death_runes_wasted": self.one_death_rune_casts + (self.two_death_rune_casts * 2),
+                "waste_events": self.death_rune_waste_events,
+            }
+        }
+
+
 class GhoulAnalyzer(BaseAnalyzer):
     INCLUDE_PET_EVENTS = True
 
@@ -1142,6 +1221,10 @@ class UnholyAnalysisScorer(AnalysisScorer):
             BloodTapAnalyzer: {
                 "weight": 1,
             },
+            FesteringStrikeTracker: {
+                "weight": 2,
+                "exponent_factor": exponent_factor,
+            },
             SoulReaperAnalyzer: {
                 "weight": 5,
                 "exponent_factor": exponent_factor,
@@ -1177,6 +1260,7 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             UnholyPresenceUptimeAnalyzer(fight.duration, buff_tracker, dead_zones),
             ArmyAnalyzer(),
             BloodTapAnalyzer(fight.end_time),
+            FesteringStrikeTracker(),
             SoulReaperAnalyzer(fight.duration, fight.end_time),
             # AMSAnalyzer(fight.end_time)
         ]
