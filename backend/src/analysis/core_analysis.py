@@ -1350,6 +1350,104 @@ class TalentPreprocessor(BasePreprocessor):
 
 
 
+class BloodChargeCapAnalyzer(BaseAnalyzer):
+    def __init__(self, combatant_info):
+        self._has_blood_tap_talent = self._check_blood_tap_talent(combatant_info)
+        self._current_charges = 0
+        self._charge_caps = 0
+        self._total_charges_wasted = 0
+        self._cap_events = []  # For timeline entries
+
+    def _check_blood_tap_talent(self, combatant_info):
+        """Check if player has Blood Tap talent (ID: 45529)"""
+        talents = combatant_info.get("talents", [])
+        return any(talent.get("id") == 45529 for talent in talents)
+
+    def add_event(self, event):
+        if not self._has_blood_tap_talent:
+            # Set blood_charges to 0 for players without the talent
+            event["blood_charges"] = 0
+            return
+
+        # Handle combatantinfo events for initial state
+        if event["type"] == "combatantinfo":
+            # Check if player starts with Blood Charge buff
+            auras = event.get("auras", [])
+            for aura in auras:
+                if aura.get("ability") == "Blood Charge" or aura.get("abilityGameID") == 114851:
+                    self._current_charges = aura.get("stacks", 0)
+                    break
+
+        # First set current charges on the event (this will be the "before" state)
+        event["blood_charges"] = self._current_charges
+
+
+        # Track Blood Charge stacks from actual buff events (spell ID: 114851)
+        if event.get("abilityGameID") == 114851:
+            if event["type"] == "applybuffstack":
+                old_charges = self._current_charges
+                new_charges = event.get("stack", 0)
+                self._current_charges = new_charges
+                # Update the event to show the new charges (after the change)
+                event["blood_charges"] = new_charges
+
+                # Check if this buff change represents charge waste (didn't get the full +2)
+                # We expect +2 charges from Death Coil/Frost Strike/Rune Strike
+                actual_gain = new_charges - old_charges
+
+                # Only check for waste if we gained some charges but less than 2, and we're at the cap
+                if actual_gain > 0 and actual_gain < 2 and new_charges == 12:
+                    charges_wasted = 2 - actual_gain
+
+                    self._charge_caps += 1
+                    self._total_charges_wasted += charges_wasted
+                    self._cap_events.append({
+                        "timestamp": event["timestamp"],  # Use the buff event timestamp
+                        "type": "blood_charge_cap",
+                        "ability": "Blood Charge Waste",
+                        "charges_before": old_charges,
+                        "charges_wasted": charges_wasted,
+                        "message": f"Blood Charge Waste: {charges_wasted} charge(s) wasted (was at {old_charges}/12)"
+                    })
+
+            elif event["type"] == "removebuffstack":
+                new_charges = event.get("stack", 0)
+                self._current_charges = new_charges
+                # Update the event to show the new charges (after the change)
+                event["blood_charges"] = new_charges
+            elif event["type"] == "applybuff":
+                # First time buff is applied - but check if there's a stack count
+                initial_charges = event.get("stack", 2)  # Default to 2 if no stack specified
+                self._current_charges = initial_charges
+                event["blood_charges"] = initial_charges
+            elif event["type"] == "removebuff":
+                self._current_charges = 0  # All charges consumed
+                event["blood_charges"] = 0
+
+    def score(self):
+        if not self._has_blood_tap_talent:
+            return 1  # Perfect score if no talent (not applicable)
+
+        if self._charge_caps == 0:
+            return 1.0
+        elif self._charge_caps <= 2:
+            return 0.8
+        elif self._charge_caps <= 5:
+            return 0.6
+        else:
+            return 0.3
+
+    def report(self):
+        return {
+            "blood_charge_caps": {
+                "has_blood_tap_talent": self._has_blood_tap_talent,
+                "total_caps": self._charge_caps,
+                "total_charges_wasted": self._total_charges_wasted,
+                "cap_events": self._cap_events,
+            }
+        }
+
+
 class SynapseSpringsAnalyzer(BaseAnalyzer):
     def __init__(self, fight_duration):
         self._fight_duration = fight_duration
@@ -1588,6 +1686,9 @@ class CoreAnalysisScorer(AnalysisScorer):
             TrinketAnalyzer: {
                 "weight": lambda ta: ta.num_on_use_trinkets,
             },
+            BloodChargeCapAnalyzer: {
+                "weight": 2,
+            },
         }
 
     def report(self):
@@ -1603,6 +1704,7 @@ class CoreAnalysisConfig:
     show_speed = False
 
     def get_analyzers(self, fight: Fight, buff_tracker, dead_zone_analyzer, items):
+        combatant_info = fight.get_combatant_info(fight.source.id)
         return [
             GCDAnalyzer(fight.source.id, buff_tracker),
             RPAnalyzer(),
@@ -1610,6 +1712,7 @@ class CoreAnalysisConfig:
             SynapseSpringsAnalyzer(fight.duration),
             MeleeUptimeAnalyzer(fight.duration, dead_zone_analyzer.get_dead_zones()),
             TrinketAnalyzer(fight.duration, items),
+            BloodChargeCapAnalyzer(combatant_info),
         ]
 
     def get_scorer(self, analyzers):

@@ -319,6 +319,28 @@ const Summary = () => {
     )
   }, [])
 
+  const formatBloodChargeCaps = useCallback(bloodChargeCaps => {
+    if (!bloodChargeCaps.has_blood_tap_talent) {
+      return null // Don't show if player doesn't have Blood Tap talent
+    }
+
+    const totalCaps = bloodChargeCaps.total_caps
+    const totalWasted = bloodChargeCaps.total_charges_wasted
+    let icon = <i className="fa fa-check green" aria-hidden="true"></i>
+    if (totalCaps > 5) {
+      icon = <i className="fa fa-times red" aria-hidden="true"></i>
+    } else if (totalCaps > 2) {
+      icon = <i className="fa fa-warning yellow" aria-hidden="true"></i>
+    }
+
+    return (
+      <div className={"blood-charge-caps"}>
+        {icon}
+        Blood Charge caps: <span className={"hl"}>{totalCaps}</span> times ({totalWasted} charges wasted)
+      </div>
+    )
+  }, [])
+
   const formatScore = useCallback(score => {
     let color = "red"
     if (score > 0.8) {
@@ -411,7 +433,7 @@ const Summary = () => {
           {summary.blood_plague_uptime !== undefined && formatUpTime(summary.blood_plague_uptime, "Blood Plague")}
           {summary.frost_fever_uptime !== undefined && formatUpTime(summary.frost_fever_uptime, "Frost Fever")}
           {summary.unholy_presence_uptime !== undefined && formatUpTime(summary.unholy_presence_uptime, "Unholy Presence")}
-          {summary.blood_tap_usages !== undefined && formatUsage(summary.blood_tap_usages, summary.blood_tap_max_usages, "Blood Tap")}
+          {summary.blood_charge_caps && formatBloodChargeCaps(summary.blood_charge_caps)}
           {summary.festering_strike_waste && formatFesteringStrikeWaste(summary.festering_strike_waste)}
           {summary.diseases_dropped && formatDiseases(summary.diseases_dropped)}
           {summary.raise_dead_usage && formatUsage(summary.raise_dead_usage.num_usages, summary.raise_dead_usage.possible_usages, "Raise Dead")}
@@ -489,6 +511,7 @@ export const Analysis = () => {
       3,
       " "
     );
+    let bloodCharges = String(event.blood_charges || 0).padStart(2, " ");
 
     let abilityTdClass = "";
     let abilityDivClass = "ability";
@@ -591,6 +614,9 @@ export const Analysis = () => {
         <td>
           <div className={"runic-power"}>{runicPower}</div>
         </td>
+        <td>
+          <div className={"blood-charges"}>{bloodCharges}</div>
+        </td>
         {showRunes ? (
           <>
             <td>
@@ -658,6 +684,7 @@ export const Analysis = () => {
               <th>Time</th>
               <th>Ability</th>
               <th>RP</th>
+              <th>BC</th>
               {summary.has_rune_spend_error ? null : (
                 <>
                   <th>Runes</th>
