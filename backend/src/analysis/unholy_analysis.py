@@ -1109,35 +1109,6 @@ class SnapshottableBuff:
         return any(buff_tracker.is_active(buff, timestamp) for buff in self.buffs)
 
 
-class BloodTapAnalyzer(BaseAnalyzer):
-    def __init__(self, fight_end_time):
-        self._num_used = 0
-        self._max_blood_tap_cooldown = 60000
-        self._fight_end_time = fight_end_time
-
-    @property
-    def max_usages(self):
-        return max(
-            1
-            + (self._fight_end_time - (self._max_blood_tap_cooldown / 2))
-            // self._max_blood_tap_cooldown,
-            self._num_used,
-        )
-
-    def add_event(self, event):
-        self._max_blood_tap_cooldown = event["blood_tap_cooldown"]
-        if event["type"] == "cast" and event["ability"] == "Blood Tap":
-            self._num_used += 1
-
-    def score(self):
-        return self._num_used / self.max_usages
-
-    def report(self):
-        return {
-            "blood_tap_usages": self._num_used,
-            "blood_tap_max_usages": self.max_usages,
-        }
-
 
 class AMSAnalyzer(BaseAnalyzer):
     def __init__(self, fight_end_time):
@@ -1218,9 +1189,6 @@ class UnholyAnalysisScorer(AnalysisScorer):
             TrinketAnalyzer: {
                 "weight": lambda ta: ta.num_on_use_trinkets * 2,
             },
-            BloodTapAnalyzer: {
-                "weight": 1,
-            },
             FesteringStrikeTracker: {
                 "weight": 2,
                 "exponent_factor": exponent_factor,
@@ -1259,7 +1227,6 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             GhoulAnalyzer(fight.duration, dead_zones),
             UnholyPresenceUptimeAnalyzer(fight.duration, buff_tracker, dead_zones),
             ArmyAnalyzer(),
-            BloodTapAnalyzer(fight.end_time),
             FesteringStrikeTracker(),
             SoulReaperAnalyzer(fight.duration, fight.end_time),
             # AMSAnalyzer(fight.end_time)

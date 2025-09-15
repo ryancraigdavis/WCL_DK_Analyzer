@@ -7,6 +7,7 @@ from analysis.core_analysis import (
     DebuffTracker,
     PetNameDetector,
     RuneHasteTracker,
+    BloodChargeCapAnalyzer,
 )
 from analysis.frost_analysis import (
     FrostAnalysisConfig,
@@ -233,7 +234,7 @@ class Analyzer:
             ):
                 events.append(event)
 
-        # Add death rune waste events from FesteringStrikeTracker
+        # Add death rune waste events from FesteringStrikeTracker and blood charge cap events
         if hasattr(self, '_analyzers'):
             for analyzer in self._analyzers:
                 if isinstance(analyzer, FesteringStrikeTracker):
@@ -247,6 +248,28 @@ class Analyzer:
                             "targetID": self._fight.source.id,
                             "death_runes_wasted": waste_event["death_runes_wasted"],
                             "message": waste_event["message"],
+                            "buffs": [],  # Will be decorated later
+                            "debuffs": [],  # Will be decorated later
+                            "runes_before": [],  # Empty runes for display events
+                            "runes": [],  # Empty runes for display events
+                            "runic_power": 0,  # Default RP
+                            "modifies_runes": False,  # Don't show rune changes
+                            "has_gcd": False,  # Not a GCD event
+                            "ability_type": 0,  # Default ability type
+                        }
+                        events.append(timeline_event)
+
+                if isinstance(analyzer, BloodChargeCapAnalyzer):
+                    for cap_event in analyzer._cap_events:
+                        # Create a timeline event for blood charge caps
+                        timeline_event = {
+                            "timestamp": cap_event["timestamp"],
+                            "type": "blood_charge_cap",
+                            "ability": cap_event["ability"],
+                            "sourceID": self._fight.source.id,
+                            "targetID": self._fight.source.id,
+                            "charges_wasted": cap_event["charges_wasted"],
+                            "message": cap_event["message"],
                             "buffs": [],  # Will be decorated later
                             "debuffs": [],  # Will be decorated later
                             "runes_before": [],  # Empty runes for display events
