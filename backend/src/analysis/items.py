@@ -41,7 +41,7 @@ class HasteTrinket(Trinket):
 
     @property
     def snapshots_gargoyle(self):
-        return False
+        return True
 
 
 class TrinketPreprocessor(BasePreprocessor):

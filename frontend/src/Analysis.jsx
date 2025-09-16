@@ -10,6 +10,7 @@ import { GargoyleAnalysis } from "./GargoyleAnalysis"
 import { DarkTransformationAnalysis } from "./DarkTransformationAnalysis"
 import { GhoulAnalysis } from "./GhoulAnalysis.jsx"
 import { SoulReaperAnalysis } from "./SoulReaperAnalysis.jsx"
+import { OutbreakAnalysis } from "./OutbreakAnalysis.jsx"
 import { formatCPM, formatIcon, formatTimestamp, formatUpTime, formatUsage, Tooltip } from "./helpers"
 
 const formatRune = (rune, i) => {
@@ -301,12 +302,7 @@ const Summary = () => {
     const twoDeathRune = festeringStrikeWaste.two_death_rune_casts
     const totalWasted = festeringStrikeWaste.total_death_runes_wasted
 
-    let icon = <i className="fa fa-check green" aria-hidden="true"></i>
-    if (totalWasted > 5) {
-      icon = <i className="fa fa-times red" aria-hidden="true"></i>
-    } else if (totalWasted > 2) {
-      icon = <i className="fa fa-warning yellow" aria-hidden="true"></i>
-    }
+    const icon = <i className="fa fa-info hl" aria-hidden="true"></i>
 
     return (
       <div className={"festering-strike-waste"}>
@@ -336,7 +332,7 @@ const Summary = () => {
     return (
       <div className={"blood-charge-caps"}>
         {icon}
-        Blood Charge caps: <span className={"hl"}>{totalCaps}</span> times ({totalWasted} charges wasted)
+        Exceeded blood charge cap: <span className={"hl"}>{totalCaps}</span> times ({totalWasted} charges wasted)
       </div>
     )
   }, [])
@@ -441,6 +437,11 @@ const Summary = () => {
           {summary.runic_power && formatRunicPower(summary.runic_power)}
           {summary.rime && formatRime(summary.rime)}
         </div>
+        {summary.outbreak_snapshots && (
+          <div className="analysis-section">
+            <OutbreakAnalysis outbreak_snapshots={summary.outbreak_snapshots} />
+          </div>
+        )}
         {summary.ghoul && (
           <div className="analysis-section">
             <GhoulAnalysis ghoul={summary.ghoul} />
