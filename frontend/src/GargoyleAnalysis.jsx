@@ -52,6 +52,16 @@ export const GargoyleAnalysis = ({ gargoyle }) => {
                     {formatUpTime(window.bloodfury_uptime, "Blood Fury")}
                   </div>
                 )}
+                {window.berserking_uptime !== 0 && (
+                  <div>
+                    {formatUpTime(window.berserking_uptime, "Berserking")}
+                  </div>
+                )}
+                {window.bloodlust_uptime !== 0 && (
+                  <div>
+                    {formatUpTime(window.bloodlust_uptime, "Bloodlust")}
+                  </div>
+                )}
               </div>
             )
           })}

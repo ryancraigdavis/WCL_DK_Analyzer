@@ -516,6 +516,22 @@ class GargoyleWindow(Window):
             self.start,
             max_duration=15000 - 25,
         )
+        self._berserking_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Berserking",
+            self.start,
+            max_duration=10000 - 25,
+        )
+        self._bloodlust_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            {"Bloodlust", "Heroism", "Time Warp"},
+            self.start,
+            max_duration=40000 - 25,
+        )
 
         # Collect all uptimes for event passing (like Dark Transformation does)
         self._uptimes = [
@@ -523,6 +539,8 @@ class GargoyleWindow(Window):
             self._fallen_crusader_uptime,
             self._potion_uptime,
             self._bloodfury_uptime,
+            self._berserking_uptime,
+            self._bloodlust_uptime,
         ]
 
         self.num_melees = 0
@@ -574,6 +592,14 @@ class GargoyleWindow(Window):
     @property
     def bloodfury_uptime(self):
         return self._bloodfury_uptime.uptime()
+
+    @property
+    def berserking_uptime(self):
+        return self._berserking_uptime.uptime()
+
+    @property
+    def bloodlust_uptime(self):
+        return self._bloodlust_uptime.uptime()
 
     # Legacy property names for frontend compatibility (but now using uptime > 0)
     @property
@@ -629,7 +655,7 @@ class GargoyleWindow(Window):
     def score(self):
         # MoP uses dynamic tracking - score based on uptime percentage
         gargoyle_duration = self.end - self.start  # 30 seconds max
-        
+
         return ScoreWeight.calculate(
             ScoreWeight(self.synapse_springs_uptime / gargoyle_duration, 2),
             ScoreWeight(self.fallen_crusader_uptime / gargoyle_duration, 3),
@@ -638,14 +664,24 @@ class GargoyleWindow(Window):
             ScoreWeight(self.num_casts / 18, 4),
             # Trinket uptime score
             ScoreWeight(
-                sum(t["uptime"] for t in self.trinket_snapshots) / 
+                sum(t["uptime"] for t in self.trinket_snapshots) /
                 (gargoyle_duration * len(self.trinket_snapshots)) if self.trinket_snapshots else 0,
                 len(self.trinket_snapshots) * 2,
             ),
-            # Blood Fury uptime score  
+            # Blood Fury uptime score
             ScoreWeight(
                 self.bloodfury_uptime / gargoyle_duration if self._bloodfury_uptime else 0,
                 2 if self._bloodfury_uptime else 0,
+            ),
+            # Berserking uptime score
+            ScoreWeight(
+                self.berserking_uptime / gargoyle_duration if self._berserking_uptime else 0,
+                2 if self._berserking_uptime else 0,
+            ),
+            # Bloodlust uptime score
+            ScoreWeight(
+                self.bloodlust_uptime / gargoyle_duration if self._bloodlust_uptime else 0,
+                3 if self._bloodlust_uptime else 0,
             ),
         )
 
@@ -715,6 +751,8 @@ class GargoyleAnalyzer(BaseAnalyzer):
                         "potion_uptime": window.potion_uptime,
                         "fallen_crusader_uptime": window.fallen_crusader_uptime,
                         "bloodfury_uptime": window.bloodfury_uptime,
+                        "berserking_uptime": window.berserking_uptime,
+                        "bloodlust_uptime": window.bloodlust_uptime,
                         "num_casts": window.num_casts,
                         "num_melees": window.num_melees,
                         "start": window.start,
@@ -1109,6 +1147,154 @@ class SnapshottableBuff:
         return any(buff_tracker.is_active(buff, timestamp) for buff in self.buffs)
 
 
+class OutbreakSnapshot:
+    def __init__(self, timestamp, buff_tracker: BuffTracker, combatant_info):
+        self.timestamp = timestamp
+        self.blood_fury = buff_tracker.is_active("Blood Fury", timestamp)
+        self.synapse_springs = buff_tracker.is_active("Synapse Springs", timestamp)
+        self.potion_of_mogu_power = buff_tracker.is_active("Potion of Mogu Power", timestamp)
+        self.fallen_crusader = buff_tracker.is_active("Unholy Strength", timestamp)
+        self.lei_shen_final_orders = buff_tracker.is_active("Unwavering Might", timestamp)
+        self.relic_of_xuen = buff_tracker.is_active("Blessing of the Celestials", timestamp)
+
+        # Check if player is orc for Blood Fury relevance
+        self.is_orc = combatant_info.get("race") == 2  # Orc race ID
+
+        # Check if buffs were ever available during the fight
+        self.has_blood_fury = buff_tracker.has_bloodfury if hasattr(buff_tracker, 'has_bloodfury') else len(buff_tracker.get_windows("Blood Fury")) > 0
+        self.has_synapse_springs = buff_tracker.has_synapse_springs if hasattr(buff_tracker, 'has_synapse_springs') else len(buff_tracker.get_windows("Synapse Springs")) > 0
+        self.has_potion = buff_tracker.has_potion if hasattr(buff_tracker, 'has_potion') else len(buff_tracker.get_windows("Potion of Mogu Power")) > 0
+        self.has_fallen_crusader = buff_tracker.has_fallen_crusader if hasattr(buff_tracker, 'has_fallen_crusader') else len(buff_tracker.get_windows("Unholy Strength")) > 0
+        self.has_lei_shen_final_orders = len(buff_tracker.get_windows("Unwavering Might")) > 0
+        self.has_relic_of_xuen = len(buff_tracker.get_windows("Blessing of the Celestials")) > 0
+
+    def get_snapshot_quality(self):
+        """Calculate a quality score for this snapshot (0-1)"""
+        buffs_snapshotted = 0
+        max_possible_buffs = 0
+
+        # Blood Fury (only relevant for orcs)
+        if self.is_orc:
+            max_possible_buffs += 1
+            if self.blood_fury:
+                buffs_snapshotted += 1
+
+        # Always relevant buffs
+        max_possible_buffs += 5  # synapse, potion, fallen crusader, lei shen, relic of xuen
+
+        if self.synapse_springs:
+            buffs_snapshotted += 1
+        if self.potion_of_mogu_power:
+            buffs_snapshotted += 1
+        if self.fallen_crusader:
+            buffs_snapshotted += 1
+        if self.lei_shen_final_orders:
+            buffs_snapshotted += 1
+        if self.relic_of_xuen:
+            buffs_snapshotted += 1
+
+        return buffs_snapshotted / max_possible_buffs if max_possible_buffs > 0 else 0
+
+    def get_snapshot_count(self):
+        """Get the number of buffs that were snapshotted"""
+        count = 0
+        if self.blood_fury and self.is_orc:
+            count += 1
+        if self.synapse_springs:
+            count += 1
+        if self.potion_of_mogu_power:
+            count += 1
+        if self.fallen_crusader:
+            count += 1
+        if self.lei_shen_final_orders:
+            count += 1
+        if self.relic_of_xuen:
+            count += 1
+        return count
+
+
+class OutbreakSnapshotTracker(BaseAnalyzer):
+    def __init__(self, buff_tracker: BuffTracker, combatant_info):
+        self._buff_tracker = buff_tracker
+        self._combatant_info = combatant_info
+        self._outbreak_snapshots = []
+
+    def add_event(self, event):
+        if event["type"] == "cast" and event.get("abilityGameID") == 77575:  # Outbreak spell ID
+            snapshot = OutbreakSnapshot(
+                event["timestamp"],
+                self._buff_tracker,
+                self._combatant_info
+            )
+            self._outbreak_snapshots.append(snapshot)
+
+    @property
+    def num_outbreaks(self):
+        return len(self._outbreak_snapshots)
+
+    @property
+    def average_snapshot_quality(self):
+        if not self._outbreak_snapshots:
+            return 0
+        return sum(snapshot.get_snapshot_quality() for snapshot in self._outbreak_snapshots) / len(self._outbreak_snapshots)
+
+    @property
+    def perfect_snapshots(self):
+        """Count outbreaks with maximum possible buffs"""
+        return sum(1 for snapshot in self._outbreak_snapshots if snapshot.get_snapshot_quality() >= 0.9)
+
+    @property
+    def poor_snapshots(self):
+        """Count outbreaks with no buffs snapshotted"""
+        return sum(1 for snapshot in self._outbreak_snapshots if snapshot.get_snapshot_count() == 0)
+
+    def score(self):
+        if not self._outbreak_snapshots:
+            return 1  # No outbreaks used, can't penalize
+
+        # Score based on average snapshot quality
+        quality_score = self.average_snapshot_quality
+
+        # Bonus for having good snapshots, penalty for poor ones
+        if self.poor_snapshots == 0:
+            quality_score += 0.1
+        elif self.poor_snapshots > len(self._outbreak_snapshots) * 0.3:
+            quality_score -= 0.2
+
+        return max(0, min(1, quality_score))
+
+    def report(self):
+        return {
+            "outbreak_snapshots": {
+                "num_outbreaks": self.num_outbreaks,
+                "average_quality": self.average_snapshot_quality,
+                "perfect_snapshots": self.perfect_snapshots,
+                "poor_snapshots": self.poor_snapshots,
+                "snapshots": [
+                    {
+                        "timestamp": snapshot.timestamp,
+                        "quality": snapshot.get_snapshot_quality(),
+                        "buffs_snapshotted": snapshot.get_snapshot_count(),
+                        "blood_fury": snapshot.blood_fury,
+                        "synapse_springs": snapshot.synapse_springs,
+                        "potion_of_mogu_power": snapshot.potion_of_mogu_power,
+                        "fallen_crusader": snapshot.fallen_crusader,
+                        "lei_shen_final_orders": snapshot.lei_shen_final_orders,
+                        "relic_of_xuen": snapshot.relic_of_xuen,
+                        "is_orc": snapshot.is_orc,
+                        "has_blood_fury": snapshot.has_blood_fury,
+                        "has_synapse_springs": snapshot.has_synapse_springs,
+                        "has_potion": snapshot.has_potion,
+                        "has_fallen_crusader": snapshot.has_fallen_crusader,
+                        "has_lei_shen_final_orders": snapshot.has_lei_shen_final_orders,
+                        "has_relic_of_xuen": snapshot.has_relic_of_xuen,
+                    }
+                    for snapshot in self._outbreak_snapshots
+                ]
+            }
+        }
+
+
 
 class AMSAnalyzer(BaseAnalyzer):
     def __init__(self, fight_end_time):
@@ -1197,6 +1383,10 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "weight": 5,
                 "exponent_factor": exponent_factor,
             },
+            OutbreakSnapshotTracker: {
+                "weight": 3,
+                "exponent_factor": exponent_factor,
+            },
         }
 
     def report(self):
@@ -1214,6 +1404,7 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
         dark_transformation = DarkTransformationAnalyzer(
             fight.duration, buff_tracker, dead_zones, items
         )
+        combatant_info = fight.get_combatant_info(fight.source.id)
 
         return super().get_analyzers(fight, buff_tracker, dead_zone_analyzer, items) + [
             DarkTransformationUptimeAnalyzer(
@@ -1229,6 +1420,7 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             ArmyAnalyzer(),
             FesteringStrikeTracker(),
             SoulReaperAnalyzer(fight.duration, fight.end_time),
+            OutbreakSnapshotTracker(buff_tracker, combatant_info),
             # AMSAnalyzer(fight.end_time)
         ]
 
