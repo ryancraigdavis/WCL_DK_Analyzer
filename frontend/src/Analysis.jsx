@@ -11,6 +11,7 @@ import { DarkTransformationAnalysis } from "./DarkTransformationAnalysis"
 import { GhoulAnalysis } from "./GhoulAnalysis.jsx"
 import { SoulReaperAnalysis } from "./SoulReaperAnalysis.jsx"
 import { OutbreakAnalysis } from "./OutbreakAnalysis.jsx"
+import { Tabs, Tab } from "./Tabs.jsx"
 import { formatCPM, formatIcon, formatTimestamp, formatUpTime, formatUsage, Tooltip } from "./helpers"
 
 const formatRune = (rune, i) => {
@@ -63,6 +64,156 @@ const formatRanking = (ranking) => {
 
 const Summary = () => {
   const analysis = useContext(LogAnalysisContext);
+
+  const formatEvent = useCallback((event, showRunes, showProcs, i) => {
+    const abilityIcon = event.ability_icon;
+    const icon = abilityIcon ? (
+      <img
+        src={abilityIcon}
+        title={event.ability}
+        alt={event.ability}
+        width={20}
+      />
+    ) : null;
+    const offset = event.gcd_offset;
+    let ability = event.ability;
+    let timestamp = <span>{formatTimestamp(event.timestamp)}</span>;
+    let runicPower = String(Math.floor(event.runic_power / 10)).padStart(
+      3,
+      " "
+    );
+    let bloodCharges = String(event.blood_charges || 0).padStart(2, " ");
+
+    let abilityTdClass = "";
+    let abilityDivClass = "ability";
+    let rowClass = "";
+
+    if (event.runic_power_waste) {
+      const runic_power_waste = Math.floor(event.runic_power_waste / 10);
+      runicPower = (
+        <>
+          {runicPower} <span className={"red"}>(+{runic_power_waste})</span>
+        </>
+      );
+    }
+
+    if (event.type === "removedebuff") {
+      abilityTdClass = "debuff-drops";
+      ability = `${ability} drops on ${event.target}`;
+    }
+
+    if (event.type === "removebuff") {
+      abilityTdClass = "buff-drops";
+      ability = `${ability} ends`;
+    }
+
+    if (event.type === "death_rune_waste") {
+      abilityTdClass = "death-rune-waste";
+      ability = `${ability} wasted ${event.death_runes_wasted} death rune${event.death_runes_wasted > 1 ? 's' : ''}`;
+    }
+
+    if (event.is_miss) {
+      rowClass = "ability-miss";
+      ability = (
+        <>
+          {ability}{" "}
+          <span className={"red"}>({event.hit_type.toLowerCase()})</span>
+        </>
+      );
+    }
+
+    if (!event.is_core_cast) {
+      abilityDivClass += " filler-cast";
+    }
+
+    const hasUnholyPresence = event.buffs.some((buff) => buff.ability === "Unholy Presence")
+    const assumedGCD = hasUnholyPresence ? 1000 : 1500
+
+    if (event.has_gcd && offset) {
+      let color;
+      if (offset - assumedGCD > 500) {
+        color = "red";
+      } else if (offset - assumedGCD > 100) {
+        color = "yellow";
+      } else {
+        color = "green";
+      }
+
+      timestamp = (
+        <span>
+          {formatTimestamp(event.timestamp)}{" "}
+          <span className={color}>
+            (+{formatTimestamp(event.gcd_offset, false)})
+          </span>
+        </span>
+      );
+    }
+
+    const formatBuff = (buff) => {
+      return (
+        <img
+          key={buff.abilityGameID}
+          src={buff.ability_icon}
+          title={buff.ability}
+          alt={buff.ability}
+          width={20}
+        />
+      );
+    };
+
+    let procsUsed = [];
+    event.buffs.forEach((buff) => {
+      if (event.consumes_km && buff.ability === "Killing Machine") {
+        procsUsed.push(buff);
+      }
+      if (event.consumes_rime && buff.ability === "Rime") {
+        procsUsed.push(buff);
+      }
+    });
+
+    return (
+      <tr className={rowClass} key={i}>
+        <td className={"timestamp"}>{timestamp}</td>
+        <td className={abilityTdClass}>
+          <div className={abilityDivClass}>
+            {icon}{" "}
+            <span className={getAbilityTypeClass(event.ability_type)}>
+              {ability}
+            </span>
+          </div>
+        </td>
+        <td>
+          <div className={"runic-power"}>{runicPower}</div>
+        </td>
+        <td>
+          <div className={"blood-charges"}>{bloodCharges}</div>
+        </td>
+        {showRunes ? (
+          <>
+            <td>
+              <div className={"runes"}>
+                {event.runes_before.map(formatRune)}
+              </div>
+              {event.modifies_runes && (
+                <div className={"runes"}>{event.runes.map(formatRune)}</div>
+              )}
+            </td>
+          </>
+        ) : null}
+        <td>
+          <div className={"buffs"}>{event.buffs.map(formatBuff)}</div>
+        </td>
+        <td>
+          <div className={"debuffs"}>{(event.debuffs || []).map(formatBuff)}</div>
+        </td>
+        {showProcs &&
+          <td>
+            <div className={"procs-used"}>{procsUsed.map(formatBuff)}</div>
+          </td>
+        }
+      </tr>
+    );
+  }, []);
 
   const formatGCDLatency = useCallback((gcdLatency, infoOnly) => {
     const averageLatency = gcdLatency.average_latency;
@@ -363,6 +514,7 @@ const Summary = () => {
 
   const data = analysis.data;
   const fight = data.fight_metadata;
+  const events = data.events;
 
   let fightRanking, playerRanking, dps
   if (Object.keys(fight.rankings).length !== 0) {
@@ -376,7 +528,6 @@ const Summary = () => {
   }
   const summary = data.analysis;
   const isUnholy = data.spec === "Frost"
-  const showSpeed = data.show_speed
 
   return (
     <div className={"analysis-summary"}>
@@ -406,303 +557,129 @@ const Summary = () => {
       <div className={"total-score-div"}>
         {formatScore(summary.analysis_scores.total_score)}
       </div>
-      <div className="fight-analysis">
-        {
-          showSpeed && (
-            <div className="analysis-section fight-analysis">
+
+      <Tabs defaultTab={0}>
+        <Tab label="Rotation" icon={<i className="fa fa-cogs" />}>
+          <div className="fight-analysis">
+            <div className="analysis-section">
               <h3>Speed</h3>
               {formatGCDLatency(summary.gcd_latency, isUnholy)}
               {summary.killing_machine && formatKillingMachine(summary.killing_machine)}
             </div>
-          )
-        }
-        <div className="analysis-section">
 
-          <h3>Speed</h3>
-          {formatGCDLatency(summary.gcd_latency, isUnholy)}
-          <h3>Rotation</h3>
-          {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
-          {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
-          {summary.dark_transformation_uptime !== undefined && formatUpTime(summary.dark_transformation_uptime, "Dark Transformation", false, summary.dark_transformation_max_uptime)}
-          {summary.melee_uptime !== undefined && formatUpTime(summary.melee_uptime, "Melee")}
-          {summary.unbreakable_armor && formatUA(summary.unbreakable_armor)}
-          {summary.blood_plague_uptime !== undefined && formatUpTime(summary.blood_plague_uptime, "Blood Plague")}
-          {summary.frost_fever_uptime !== undefined && formatUpTime(summary.frost_fever_uptime, "Frost Fever")}
-          {summary.unholy_presence_uptime !== undefined && formatUpTime(summary.unholy_presence_uptime, "Unholy Presence")}
-          {summary.blood_charge_caps && formatBloodChargeCaps(summary.blood_charge_caps)}
-          {summary.festering_strike_waste && formatFesteringStrikeWaste(summary.festering_strike_waste)}
-          {summary.diseases_dropped && formatDiseases(summary.diseases_dropped)}
-          {summary.raise_dead_usage && formatUsage(summary.raise_dead_usage.num_usages, summary.raise_dead_usage.possible_usages, "Raise Dead")}
-          {summary.howling_blast_bad_usages && formatHowlingBlast(summary.howling_blast_bad_usages)}
-          {summary.runic_power && formatRunicPower(summary.runic_power)}
-          {summary.rime && formatRime(summary.rime)}
-        </div>
-        {summary.outbreak_snapshots && (
-          <div className="analysis-section">
-            <OutbreakAnalysis outbreak_snapshots={summary.outbreak_snapshots} />
-          </div>
-        )}
-        {summary.ghoul && (
-          <div className="analysis-section">
-            <GhoulAnalysis ghoul={summary.ghoul} />
-          </div>
-        )}
-        {summary.dark_transformation && (
-          <div className="analysis-section">
-            <DarkTransformationAnalysis dark_transformation={summary.dark_transformation} />
-          </div>
-        )}
-        {summary.gargoyle && (
-          <div className="analysis-section">
-            <GargoyleAnalysis gargoyle={summary.gargoyle} />
-          </div>
-        )}
-        {summary.soul_reaper && (
-          <div className="analysis-section">
-            <SoulReaperAnalysis soulReaper={summary.soul_reaper} />
-          </div>
-        )}
-        {summary.army && (
-          <div className="analysis-section">
-            <ArmyAnalysis army={summary.army} />
-          </div>
-        )}
-        <div className="analysis-section">
-          <h3>Miscellaneous</h3>
-          {summary.trinket_usages && summary.trinket_usages.map((trinket, index) => (
-            <div key={index}>
-              {formatUsage(
-                trinket.num_actual,
-                trinket.num_possible,
-                <>{formatIcon(trinket.name, trinket.icon)} {trinket.name}</>,
-              )}
+            <div className="analysis-section">
+              <h3>Rotation</h3>
+              {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
+              {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
+              {summary.dark_transformation_uptime !== undefined && formatUpTime(summary.dark_transformation_uptime, "Dark Transformation", false, summary.dark_transformation_max_uptime)}
+              {summary.melee_uptime !== undefined && formatUpTime(summary.melee_uptime, "Melee")}
+              {summary.unbreakable_armor && formatUA(summary.unbreakable_armor)}
+              {summary.blood_plague_uptime !== undefined && formatUpTime(summary.blood_plague_uptime, "Blood Plague")}
+              {summary.frost_fever_uptime !== undefined && formatUpTime(summary.frost_fever_uptime, "Frost Fever")}
+              {summary.unholy_presence_uptime !== undefined && formatUpTime(summary.unholy_presence_uptime, "Unholy Presence")}
+              {summary.blood_charge_caps && formatBloodChargeCaps(summary.blood_charge_caps)}
+              {summary.festering_strike_waste && formatFesteringStrikeWaste(summary.festering_strike_waste)}
+              {summary.diseases_dropped && formatDiseases(summary.diseases_dropped)}
+              {summary.raise_dead_usage && formatUsage(summary.raise_dead_usage.num_usages, summary.raise_dead_usage.possible_usages, "Raise Dead")}
+              {summary.howling_blast_bad_usages && formatHowlingBlast(summary.howling_blast_bad_usages)}
+              {summary.runic_power && formatRunicPower(summary.runic_power)}
+              {summary.rime && formatRime(summary.rime)}
             </div>
-          ))}
-          {summary.synapse_springs && formatUsage(
-            summary.synapse_springs.num_actual,
-            summary.synapse_springs.num_possible,
-            "Synapse Springs",
-          )}
-          {summary.potion_usage && formatPotions(summary.potion_usage)}
-        {summary.flask_usage && formatFlask(summary.flask_usage)}
-        {summary.food_usage && formatFood(summary.food_usage)}
-        </div>
-      </div>
+
+            {summary.outbreak_snapshots && (
+              <div className="analysis-section">
+                <OutbreakAnalysis outbreak_snapshots={summary.outbreak_snapshots} />
+              </div>
+            )}
+
+            {summary.soul_reaper && (
+              <div className="analysis-section">
+                <SoulReaperAnalysis soulReaper={summary.soul_reaper} />
+              </div>
+            )}
+
+            <div className="analysis-section">
+              <h3>Miscellaneous</h3>
+              {summary.trinket_usages && summary.trinket_usages.map((trinket, index) => (
+                <div key={index}>
+                  {formatUsage(
+                    trinket.num_actual,
+                    trinket.num_possible,
+                    <>{formatIcon(trinket.name, trinket.icon)} {trinket.name}</>,
+                  )}
+                </div>
+              ))}
+              {summary.synapse_springs && formatUsage(
+                summary.synapse_springs.num_actual,
+                summary.synapse_springs.num_possible,
+                "Synapse Springs",
+              )}
+              {summary.potion_usage && formatPotions(summary.potion_usage)}
+              {summary.flask_usage && formatFlask(summary.flask_usage)}
+              {summary.food_usage && formatFood(summary.food_usage)}
+            </div>
+          </div>
+        </Tab>
+
+        <Tab label="Pets" icon={<i className="fa fa-paw" />}>
+          <div className="fight-analysis">
+            {summary.ghoul && (
+              <div className="analysis-section">
+                <GhoulAnalysis ghoul={summary.ghoul} />
+              </div>
+            )}
+            {summary.dark_transformation && (
+              <div className="analysis-section">
+                <DarkTransformationAnalysis dark_transformation={summary.dark_transformation} />
+              </div>
+            )}
+            {summary.gargoyle && (
+              <div className="analysis-section">
+                <GargoyleAnalysis gargoyle={summary.gargoyle} />
+              </div>
+            )}
+            {summary.army && (
+              <div className="analysis-section">
+                <ArmyAnalysis army={summary.army} />
+              </div>
+            )}
+          </div>
+        </Tab>
+
+        <Tab label="Timeline" icon={<i className="fa fa-clock-o" />}>
+          <div className="fight-analysis">
+            <div className={"events-table"}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Ability</th>
+                    <th>RP</th>
+                    <th>BC</th>
+                    {summary.has_rune_spend_error ? null : (
+                      <>
+                        <th>Runes</th>
+                      </>
+                    )}
+                    <th>Buffs</th>
+                    <th>Debuffs</th>
+                    {data.show_procs && <th>Procs Used</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((event, i) =>
+                    formatEvent(event, !summary.has_rune_spend_error, data.show_procs, i)
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Tab>
+      </Tabs>
     </div>
   );
 };
 
 export const Analysis = () => {
-  const analysis = useContext(LogAnalysisContext);
-
-  const formatEvent = useCallback((event, showRunes, showProcs, i) => {
-    const abilityIcon = event.ability_icon;
-    const icon = abilityIcon ? (
-      <img
-        src={abilityIcon}
-        title={event.ability}
-        alt={event.ability}
-        width={20}
-      />
-    ) : null;
-    const offset = event.gcd_offset;
-    let ability = event.ability;
-    let timestamp = <span>{formatTimestamp(event.timestamp)}</span>;
-    let runicPower = String(Math.floor(event.runic_power / 10)).padStart(
-      3,
-      " "
-    );
-    let bloodCharges = String(event.blood_charges || 0).padStart(2, " ");
-
-    let abilityTdClass = "";
-    let abilityDivClass = "ability";
-    let rowClass = "";
-
-    if (event.runic_power_waste) {
-      const runic_power_waste = Math.floor(event.runic_power_waste / 10);
-      runicPower = (
-        <>
-          {runicPower} <span className={"red"}>(+{runic_power_waste})</span>
-        </>
-      );
-    }
-
-    if (event.type === "removedebuff") {
-      abilityTdClass = "debuff-drops";
-      ability = `${ability} drops on ${event.target}`;
-    }
-
-    if (event.type === "removebuff") {
-      abilityTdClass = "buff-drops";
-      ability = `${ability} ends`;
-    }
-
-    if (event.type === "death_rune_waste") {
-      abilityTdClass = "death-rune-waste";
-      ability = `${ability} wasted ${event.death_runes_wasted} death rune${event.death_runes_wasted > 1 ? 's' : ''}`;
-    }
-
-    if (event.is_miss) {
-      rowClass = "ability-miss";
-      ability = (
-        <>
-          {ability}{" "}
-          <span className={"red"}>({event.hit_type.toLowerCase()})</span>
-        </>
-      );
-    }
-
-    if (!event.is_core_cast) {
-      abilityDivClass += " filler-cast";
-    }
-
-    const hasUnholyPresence = event.buffs.some((buff) => buff.ability === "Unholy Presence")
-    const assumedGCD = hasUnholyPresence ? 1000 : 1500
-
-    if (event.has_gcd && offset) {
-      let color;
-      if (offset - assumedGCD > 500) {
-        color = "red";
-      } else if (offset - assumedGCD > 100) {
-        color = "yellow";
-      } else {
-        color = "green";
-      }
-
-      timestamp = (
-        <span>
-          {formatTimestamp(event.timestamp)}{" "}
-          <span className={color}>
-            (+{formatTimestamp(event.gcd_offset, false)})
-          </span>
-        </span>
-      );
-    }
-
-    const formatBuff = (buff) => {
-      return (
-        <img
-          key={buff.abilityGameID}
-          src={buff.ability_icon}
-          title={buff.ability}
-          alt={buff.ability}
-          width={20}
-        />
-      );
-    };
-
-    let procsUsed = [];
-    event.buffs.forEach((buff) => {
-      if (event.consumes_km && buff.ability === "Killing Machine") {
-        procsUsed.push(buff);
-      }
-      if (event.consumes_rime && buff.ability === "Rime") {
-        procsUsed.push(buff);
-      }
-    });
-
-    return (
-      <tr className={rowClass} key={i}>
-        <td className={"timestamp"}>{timestamp}</td>
-        <td className={abilityTdClass}>
-          <div className={abilityDivClass}>
-            {icon}{" "}
-            <span className={getAbilityTypeClass(event.ability_type)}>
-              {ability}
-            </span>
-          </div>
-        </td>
-        <td>
-          <div className={"runic-power"}>{runicPower}</div>
-        </td>
-        <td>
-          <div className={"blood-charges"}>{bloodCharges}</div>
-        </td>
-        {showRunes ? (
-          <>
-            <td>
-              <div className={"runes"}>
-                {event.runes_before.map(formatRune)}
-              </div>
-              {event.modifies_runes && (
-                <div className={"runes"}>{event.runes.map(formatRune)}</div>
-              )}
-            </td>
-          </>
-        ) : null}
-        <td>
-          <div className={"buffs"}>{event.buffs.map(formatBuff)}</div>
-        </td>
-        <td>
-          <div className={"debuffs"}>{(event.debuffs || []).map(formatBuff)}</div>
-        </td>
-        {showProcs &&
-          <td>
-            <div className={"procs-used"}>{procsUsed.map(formatBuff)}</div>
-          </td>
-        }
-      </tr>
-    );
-  }, []);
-
-  if (analysis.error) {
-    return <>Error: {analysis.error}</>;
-  }
-
-  if (analysis.isLoading) {
-    return (
-      <div className={"fa-2x"}>
-        <i className="fa fa-spinner fa-spin"></i>
-      </div>
-    );
-  }
-
-  const data = analysis.data;
-  const events = data.events;
-  const summary = data.analysis;
-
-  {/*  const runeWarning = () => {
-    const warning = <i className={"fa fa-warning yellow"} />;
-    if (summary.has_rune_spend_error) {
-      return (
-        <span>{warning} The runes for this fight could not be guessed</span>
-      );
-    }
-    return <span>{warning} Runes shown are a best-effort approximation</span>;
-  };*/}
-
-  return (
-    <>
-      <a rel="noreferrer" href={window.location.href} target={"_blank"}>
-        <i className="fa fa-external-link" aria-hidden="true" />
-      </a>
-      <Summary />
-    {/*{runeWarning()}*/}
-      <div className={"events-table"}>
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Ability</th>
-              <th>RP</th>
-              <th>BC</th>
-              {summary.has_rune_spend_error ? null : (
-                <>
-                  <th>Runes</th>
-                </>
-              )}
-              <th>Buffs</th>
-              <th>Debuffs</th>
-              {data.show_procs && <th>Procs Used</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((event, i) =>
-              formatEvent(event, !summary.has_rune_spend_error, data.show_procs, i)
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-};
+  return <Summary />
+}
