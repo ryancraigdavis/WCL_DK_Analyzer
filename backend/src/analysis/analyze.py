@@ -317,7 +317,7 @@ class Analyzer:
                 self._get_item_preprocessor(),
             )
         )
-        analyzers.append(self._analysis_config.get_scorer(analyzers))
+        analyzers.append(self._analysis_config.get_scorer(analyzers, self._fight))
         self._analyzers = analyzers  # Store for access in displayable_events
 
         source_id = self._fight.source.id

@@ -55,6 +55,11 @@ class DeadZoneAnalyzer(BasePreprocessor):
             "Algalon the Observer": self._check_algalon,
             "The Northrend Beasts": self._check_boss_events_occur,
             "Anub'arak": self._check_boss_events_occur,
+            "Blade Lord Ta'yak": self._check_blade_lord_tayak,
+            "Amber-Shaper Un'sok": self._check_amber_shaper_unsok,
+            "Grand Empress Shek'zeer": self._check_grand_empress_shekzeer,
+            "Tsulong": self._check_tsulong,
+            "Lei Shi": self._check_lei_shi,
         }.get(self._fight.encounter.name)
         self._encounter_name = self._fight.encounter.name
         self._is_hard_mode = self._fight.is_hard_mode
@@ -235,6 +240,204 @@ class DeadZoneAnalyzer(BasePreprocessor):
             self._dead_zones.append(dead_zone)
 
         self._last_event = event
+
+    def _check_blade_lord_tayak(self, event):
+        """
+        Blade Lord Ta'yak deadzone detection for tornado phase at 20% health.
+        Transition happens at 20% boss HP. Players get sucked into tornados for ~15 seconds,
+        then must run across the room. Dead zone ends when player hits boss again.
+        """
+        # Initialize boss targetID detection on first relevant event
+        if not hasattr(self, '_boss_target_id'):
+            self._boss_target_id = None
+            self._max_hp_seen = 0
+
+        # Identify boss by highest maxHitPoints (typically 500M+ HP)
+        if (event["type"] == "damage" and
+            event.get("maxHitPoints") and
+            event["maxHitPoints"] > self._max_hp_seen):
+            self._max_hp_seen = event["maxHitPoints"]
+            self._boss_target_id = event.get("targetID")
+
+        # Track boss HP to detect 20% transition
+        if (event["type"] == "damage" and
+            event.get("targetID") == self._boss_target_id and
+            event.get("hitPoints") and event.get("maxHitPoints")):
+
+            hp_percentage = (event["hitPoints"] / event["maxHitPoints"]) * 100
+
+            # Start dead zone when boss hits 20% HP
+            if hp_percentage <= 20 and not hasattr(self, '_tornado_phase_started'):
+                self._tornado_phase_started = True
+                self._last_event = event
+                return
+
+        # Track player combat actions on the boss to detect when dead zone ends
+        if (event.get("targetID") == self._boss_target_id and
+            event["type"] in ("cast", "damage") and
+            event["sourceID"] == self._fight.source.id):
+
+            # If we're in tornado phase and player hits boss again, end dead zone
+            if (hasattr(self, '_tornado_phase_started') and
+                self._tornado_phase_started and
+                self._last_event):
+
+                dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+                self._dead_zones.append(dead_zone)
+                self._tornado_phase_started = False
+                self._last_event = None
+
+    def _check_amber_shaper_unsok(self, event):
+        """
+        Amber-Shaper Un'sok deadzone detection for Amber Carapace phase.
+        Creates deadzones when the boss gains 99% damage immunity while Amber Monstrosity is alive.
+        """
+        # Initialize boss targetID detection on first relevant event
+        if not hasattr(self, '_boss_target_id'):
+            self._boss_target_id = None
+            self._max_hp_seen = 0
+
+        # Identify boss by highest maxHitPoints (typically 500M+ HP)
+        if (event["type"] == "damage" and
+            event.get("maxHitPoints") and
+            event["maxHitPoints"] > self._max_hp_seen):
+            self._max_hp_seen = event["maxHitPoints"]
+            self._boss_target_id = event.get("targetID")
+
+        # Track the Amber Carapace buff application and removal
+        if event["type"] not in ("applybuff", "removebuff"):
+            return
+
+        if event["ability"] != "Amber Carapace":
+            return
+
+        # Only track buffs on the boss using targetID
+        if event.get("targetID") != self._boss_target_id:
+            return
+
+        if event["type"] == "applybuff":
+            # Start deadzone when Amber Carapace is applied
+            self._last_event = event
+        elif event["type"] == "removebuff" and self._last_event:
+            # End deadzone when Amber Carapace is removed
+            dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            self._dead_zones.append(dead_zone)
+            self._last_event = None
+
+    def _check_grand_empress_shekzeer(self, event):
+        """
+        Grand Empress Shek'zeer deadzone detection for Dissonance Field phase.
+        When the boss enters the Dissonance Field phase, players become Mind Controlled
+        and cannot attack the boss. Dead zone ends when the phase ends.
+        """
+        # Initialize boss targetID detection on first relevant event
+        if not hasattr(self, '_boss_target_id'):
+            self._boss_target_id = None
+            self._max_hp_seen = 0
+
+        # Identify boss by highest maxHitPoints (typically 500M+ HP)
+        if (event["type"] == "damage" and
+            event.get("maxHitPoints") and
+            event["maxHitPoints"] > self._max_hp_seen):
+            self._max_hp_seen = event["maxHitPoints"]
+            self._boss_target_id = event.get("targetID")
+
+        # Track Dissonance Field buff application and removal on the boss
+        if event["type"] not in ("applybuff", "removebuff"):
+            return
+
+        if event["ability"] != "Dissonance Field":
+            return
+
+        # Only track buffs on the boss using targetID
+        if event.get("targetID") != self._boss_target_id:
+            return
+
+        if event["type"] == "applybuff":
+            # Start deadzone when Dissonance Field is applied
+            self._last_event = event
+        elif event["type"] == "removebuff" and self._last_event:
+            # End deadzone when Dissonance Field is removed
+            dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            self._dead_zones.append(dead_zone)
+            self._last_event = None
+
+    def _check_tsulong(self, event):
+        """
+        Tsulong deadzone detection for Day phase transitions.
+        When Tsulong enters Day phase, he becomes untargetable and players
+        must focus on healing the Sunbeam. Dead zone ends when Night phase begins.
+        """
+        # Initialize boss targetID detection on first relevant event
+        if not hasattr(self, '_boss_target_id'):
+            self._boss_target_id = None
+            self._max_hp_seen = 0
+
+        # Identify boss by highest maxHitPoints (typically 500M+ HP)
+        if (event["type"] == "damage" and
+            event.get("maxHitPoints") and
+            event["maxHitPoints"] > self._max_hp_seen):
+            self._max_hp_seen = event["maxHitPoints"]
+            self._boss_target_id = event.get("targetID")
+
+        # Track Day phase by monitoring when boss becomes untargetable
+        # Day phase starts when "Day" buff is applied to boss
+        if event["type"] not in ("applybuff", "removebuff"):
+            return
+
+        if event["ability"] != "Day":
+            return
+
+        # Only track buffs on the boss using targetID
+        if event.get("targetID") != self._boss_target_id:
+            return
+
+        if event["type"] == "applybuff":
+            # Start deadzone when Day phase begins (boss untargetable)
+            self._last_event = event
+        elif event["type"] == "removebuff" and self._last_event:
+            # End deadzone when Day phase ends (Night phase begins)
+            dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            self._dead_zones.append(dead_zone)
+            self._last_event = None
+
+    def _check_lei_shi(self, event):
+        """
+        Lei Shi deadzone detection for Hide phase and immunity periods.
+        When Lei Shi uses Hide, she becomes untargetable and immune to damage.
+        Dead zone ends when she reappears and can be targeted again.
+        """
+        # Initialize boss targetID detection on first relevant event
+        if not hasattr(self, '_boss_target_id'):
+            self._boss_target_id = None
+            self._max_hp_seen = 0
+
+        # Identify boss by highest maxHitPoints (typically 500M+ HP)
+        if (event["type"] == "damage" and
+            event.get("maxHitPoints") and
+            event["maxHitPoints"] > self._max_hp_seen):
+            self._max_hp_seen = event["maxHitPoints"]
+            self._boss_target_id = event.get("targetID")
+
+        # Track Hide phase by monitoring Hide buff application and removal
+        if event["type"] not in ("applybuff", "removebuff"):
+            return
+
+        if event["ability"] != "Hide":
+            return
+
+        # Only track buffs on the boss using targetID
+        if event.get("targetID") != self._boss_target_id:
+            return
+
+        if event["type"] == "applybuff":
+            # Start deadzone when Hide is applied (boss becomes untargetable)
+            self._last_event = event
+        elif event["type"] == "removebuff" and self._last_event:
+            # End deadzone when Hide is removed (boss becomes targetable)
+            dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            self._dead_zones.append(dead_zone)
+            self._last_event = None
 
     def preprocess_event(self, event):
         if not self._checker:
@@ -1146,13 +1349,18 @@ class PetNameDetector(BasePreprocessor):
 
 
 class RPAnalyzer(BaseAnalyzer):
-    def __init__(self):
+    def __init__(self, ignore_windows=None):
         self._count_wasted = 0
         self._sum_wasted = 0
         self._count_gained = 0
         self._sum_gained = 0
+        self._ignore_windows = ignore_windows or []
 
     def add_event(self, event):
+        # Skip events during dead zones
+        if event.get("in_dead_zone"):
+            return
+
         if event["type"] == "cast" and event.get("runic_power_waste", 0) > 0:
             self._count_wasted += 1
             self._sum_wasted += event["runic_power_waste"] // 10
@@ -1276,6 +1484,7 @@ class GCDAnalyzer(BaseAnalyzer):
         return {
             "gcd_latency": {
                 "average_latency": average_latency,
+                "color": "blue",
             }
         }
 
@@ -1356,9 +1565,10 @@ class TalentPreprocessor(BasePreprocessor):
 
 
 class SoulReaperAnalyzer(BaseAnalyzer):
-    def __init__(self, fight_duration, fight_end_time):
+    def __init__(self, fight_duration, fight_end_time, ignore_windows=None):
         self._fight_duration = fight_duration
         self._fight_end_time = fight_end_time
+        self._ignore_windows = ignore_windows or []
         self._soul_reaper_hits = []
         self._execute_phase_start = None
         self._boss_current_hp = None
@@ -1411,7 +1621,20 @@ class SoulReaperAnalyzer(BaseAnalyzer):
     def execute_phase_duration(self):
         if self._execute_phase_start is None:
             return 0
-        return self._fight_end_time - self._execute_phase_start
+
+        # Calculate base duration
+        base_duration = self._fight_end_time - self._execute_phase_start
+
+        # If no dead zones, return base duration
+        if not self._ignore_windows:
+            return base_duration
+
+        # Calculate uptime during execute phase, accounting for dead zones
+        execute_window = Window(self._execute_phase_start, self._fight_end_time)
+        execute_uptime = calculate_uptime([execute_window], self._ignore_windows, base_duration)
+
+        # Return the actual uptime duration (not percentage)
+        return execute_uptime * base_duration
 
     @property
     def soul_reaper_hits_in_execute_window(self):
@@ -1644,18 +1867,27 @@ class BloodChargeCapAnalyzer(BaseAnalyzer):
 
 
 class SynapseSpringsAnalyzer(BaseAnalyzer):
-    def __init__(self, fight_duration):
+    def __init__(self, fight_duration, ignore_windows=None):
         self._fight_duration = fight_duration
+        self._ignore_windows = ignore_windows or []
         self._num_synapse_springs = 0
 
     def add_event(self, event):
+        # Skip events during dead zones
+        if event.get("in_dead_zone"):
+            return
+
         if event["type"] == "cast" and event["ability"] == "Synapse Springs":
             self._num_synapse_springs += 1
 
     @property
     def possible_synapse_springs(self):
+        # Calculate fight duration excluding dead zones
+        dead_zone_duration = sum(window.duration for window in self._ignore_windows)
+        effective_duration = self._fight_duration - dead_zone_duration
+
         return max(
-            1 + (self._fight_duration - 5000) // 63000, self._num_synapse_springs
+            1 + (effective_duration - 5000) // 63000, self._num_synapse_springs
         )
 
     def score(self):
@@ -2243,9 +2475,6 @@ class PlagueLeechAnalyzer(BaseAnalyzer):
 class CoreAnalysisScorer(AnalysisScorer):
     def get_score_weights(self):
         return {
-            GCDAnalyzer: {
-                "weight": 3,
-            },
             BuffTracker: {
                 "weight": 1,
             },
@@ -2277,19 +2506,20 @@ class CoreAnalysisConfig:
 
     def get_analyzers(self, fight: Fight, buff_tracker, dead_zone_analyzer, items):
         combatant_info = fight.get_combatant_info(fight.source.id)
+        dead_zones = dead_zone_analyzer.get_dead_zones()
         return [
             GCDAnalyzer(fight.source.id, buff_tracker),
-            RPAnalyzer(),
+            RPAnalyzer(dead_zones),
             CoreAbilities(),
-            SynapseSpringsAnalyzer(fight.duration),
-            MeleeUptimeAnalyzer(fight.duration, dead_zone_analyzer.get_dead_zones()),
+            SynapseSpringsAnalyzer(fight.duration, dead_zones),
+            MeleeUptimeAnalyzer(fight.duration, dead_zones),
             TrinketAnalyzer(fight.duration, items),
             BloodChargeCapAnalyzer(combatant_info),
             SoulReaperAnalyzer(fight.duration, fight.start_time + fight.duration),
             EmpoweredRuneWeaponAnalyzer(),
         ]
 
-    def get_scorer(self, analyzers):
+    def get_scorer(self, analyzers, fight=None):
         return CoreAnalysisScorer(analyzers)
 
     def create_rune_tracker(self) -> RuneTracker:
