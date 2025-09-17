@@ -66,7 +66,13 @@ class AnalysisScorer(BaseAnalyzer):
         for analyzer_cls, score_weight_dict in score_weights_dict.items():
             analyzer = self.get_analyzer(analyzer_cls)
             exponent_factor = score_weight_dict.get("exponent_factor", 1)
-            score = analyzer.score() ** exponent_factor
+
+            try:
+                score = analyzer.score() ** exponent_factor
+            except NotImplementedError:
+                raise NotImplementedError(
+                    f"Analyzer {analyzer_cls.__name__} does not implement score() method"
+                )
 
             weight = score_weight_dict["weight"]
             if callable(weight):

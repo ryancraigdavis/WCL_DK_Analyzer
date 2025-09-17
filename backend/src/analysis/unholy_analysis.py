@@ -23,6 +23,7 @@ from analysis.core_analysis import (
     BuffUptimeAnalyzer,
     # T15UptimeAnalyzer,
     RuneHasteTracker,
+    SoulReaperAnalyzer,
 )
 from analysis.items import ItemPreprocessor
 from report import Fight
@@ -1016,98 +1017,6 @@ class ArmyAnalyzer(BaseAnalyzer):
         else:
             return self.total_damage / 100000
 
-
-class SoulReaperAnalyzer(BaseAnalyzer):
-    def __init__(self, fight_duration, fight_end_time):
-        self._fight_duration = fight_duration
-        self._fight_end_time = fight_end_time
-        self._soul_reaper_casts = []
-        self._execute_phase_start = None
-        self._boss_current_hp = None
-        self._boss_max_hp = None
-        
-    def add_event(self, event):
-        # Track boss HP to detect 35% threshold
-        if event["type"] == "damage" and event.get("target_is_boss"):
-            if event.get("hitPoints") and event.get("maxHitPoints"):
-                self._boss_current_hp = event["hitPoints"]
-                self._boss_max_hp = event["maxHitPoints"]
-                
-                # Check if boss just hit 35%
-                hp_percentage = (self._boss_current_hp / self._boss_max_hp) * 100
-                if hp_percentage <= 35 and self._execute_phase_start is None:
-                    self._execute_phase_start = event["timestamp"]
-        
-        # Track Soul Reaper casts (ability IDs: 130735 Frost, 130736 Unholy, 114867)
-        if (event["type"] == "cast" and 
-            event.get("abilityGameID") in (130735, 130736, 114867)):
-            self._soul_reaper_casts.append({
-                "timestamp": event["timestamp"],
-                "target": event.get("targetID"),
-                "in_execute_phase": self._execute_phase_start is not None and 
-                                   event["timestamp"] >= self._execute_phase_start
-            })
-    
-    @property
-    def execute_phase_duration(self):
-        if self._execute_phase_start is None:
-            return 0
-        return self._fight_end_time - self._execute_phase_start
-    
-    @property
-    def soul_reaper_casts_in_execute(self):
-        return [cast for cast in self._soul_reaper_casts if cast["in_execute_phase"]]
-    
-    @property
-    def max_possible_soul_reapers(self):
-        if self.execute_phase_duration <= 0:
-            return 0
-        # 6 second cooldown, account for first cast delay
-        return max(0, int((self.execute_phase_duration - 2000) / 6000) + 1)
-    
-    @property
-    def first_soul_reaper_delay(self):
-        execute_casts = self.soul_reaper_casts_in_execute
-        if not execute_casts or self._execute_phase_start is None:
-            return None
-        return execute_casts[0]["timestamp"] - self._execute_phase_start
-    
-    def score(self):
-        if self._execute_phase_start is None:
-            return 0  # No execute phase detected
-            
-        execute_casts = len(self.soul_reaper_casts_in_execute)
-        max_possible = self.max_possible_soul_reapers
-        
-        if max_possible == 0:
-            return 1 if execute_casts == 0 else 0
-            
-        # Score based on 90% efficiency threshold
-        efficiency = execute_casts / max_possible
-        threshold = 0.9
-        
-        # Bonus points for quick first cast (within 2 seconds)
-        first_cast_bonus = 0
-        if self.first_soul_reaper_delay is not None and self.first_soul_reaper_delay <= 2000:
-            first_cast_bonus = 0.1
-            
-        return min(1.0, efficiency / threshold + first_cast_bonus)
-    
-    def report(self):
-        return {
-            "soul_reaper": {
-                "execute_phase_detected": self._execute_phase_start is not None,
-                "execute_phase_start": self._execute_phase_start,
-                "execute_phase_duration": self.execute_phase_duration / 1000 if self.execute_phase_duration > 0 else 0,
-                "total_casts": len(self._soul_reaper_casts),
-                "execute_phase_casts": len(self.soul_reaper_casts_in_execute),
-                "max_possible_casts": self.max_possible_soul_reapers,
-                "first_cast_delay": self.first_soul_reaper_delay / 1000 if self.first_soul_reaper_delay is not None else None,
-                "efficiency": len(self.soul_reaper_casts_in_execute) / max(1, self.max_possible_soul_reapers),
-                "score": self.score(),
-                "casts": self._soul_reaper_casts
-            }
-        }
 
 
 class UnholyPresenceUptimeAnalyzer(BaseAnalyzer):

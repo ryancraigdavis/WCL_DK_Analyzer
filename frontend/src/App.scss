@@ -284,6 +284,19 @@ td .rune {
   color: darkgrey;
 }
 
+.km-usage-timing {
+  background: #1a4a2e !important;
+  color: #90ee90;
+}
+
+.obliterate-death-rune-usage {
+  /* Remove red background highlighting but keep normal timeline styling */
+}
+
+.plague-strike-death-rune-usage {
+  /* Remove red background highlighting but keep normal timeline styling */
+}
+
 .filler-cast {
   padding-left: 20px;
 }
@@ -310,8 +323,7 @@ td .rune {
 
 .uptime-score {
   display: inline-block;
-  text-align: right;
-  flex-grow: 1;
+  margin-left: 4px;
 }
 
 .uptime {
