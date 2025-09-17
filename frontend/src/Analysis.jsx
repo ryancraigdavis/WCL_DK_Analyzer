@@ -12,7 +12,7 @@ import { GhoulAnalysis } from "./GhoulAnalysis.jsx"
 import { SoulReaperAnalysis } from "./SoulReaperAnalysis.jsx"
 import { OutbreakAnalysis } from "./OutbreakAnalysis.jsx"
 import { Tabs, Tab } from "./Tabs.jsx"
-import { formatCPM, formatIcon, formatTimestamp, formatUpTime, formatUsage, Tooltip } from "./helpers"
+import { formatIcon, formatTimestamp, formatUpTime, formatUsage, Tooltip } from "./helpers"
 
 const formatRune = (rune, i) => {
   const src = {
@@ -110,6 +110,12 @@ const Summary = () => {
     if (event.type === "death_rune_waste") {
       abilityTdClass = "death-rune-waste";
       ability = `${ability} wasted ${event.death_runes_wasted} death rune${event.death_runes_wasted > 1 ? 's' : ''}`;
+    }
+
+    if (event.type === "km_usage_timing") {
+      abilityTdClass = "km-usage-timing";
+      const delaySeconds = (event.km_delay_ms / 1000).toFixed(2);
+      ability = `${ability} used KM proc after ${delaySeconds}s`;
     }
 
     if (event.is_miss) {
@@ -297,21 +303,35 @@ const Summary = () => {
     );
   }, []);
 
-  const formatKillingMachine = useCallback((killingMachine) => {
-    const averageLatency = killingMachine.avg_latency;
-    const averageLatencySeconds = averageLatency / 1000;
+  const formatKillingMachineSpeed = useCallback((killingMachine) => {
+    const totalTimeSeconds = killingMachine.total_time_seconds || 0;
+
+    return (
+      <div className={"killing-machine-speed"}>
+        <i className="fa fa-hourglass-half hl" aria-hidden="true"></i>
+        Total time to use KM procs across fight:{" "}
+        <span className={"hl"}>
+          {totalTimeSeconds.toFixed(1)} seconds
+        </span>
+      </div>
+    );
+  }, []);
+
+  const formatKillingMachineRotation = useCallback((killingMachine) => {
+    const averageLatency = killingMachine.avg_latency || 0;
+    const averageLatencySeconds = killingMachine.avg_time_seconds || (averageLatency / 1000);
     const numUsed = killingMachine.num_used;
     const numTotal = killingMachine.num_total;
     let color = "green";
 
-    if (averageLatency > 2500) {
+    if (averageLatencySeconds > 2.5) {
       color = "red";
-    } else if (averageLatency > 2000) {
+    } else if (averageLatencySeconds > 2.0) {
       color = "yellow";
     }
 
     return (
-      <div className={"killing-machine"}>
+      <div className={"killing-machine-rotation"}>
         <i className="fa fa-clock-o hl" aria-hidden="true"></i>
         You used{" "}
         <span className={"hl"}>
@@ -321,6 +341,222 @@ const Summary = () => {
         <span className={color}>
           {averageLatencySeconds.toFixed(2)} seconds
         </span>
+      </div>
+    );
+  }, []);
+
+  const formatKillingMachineBreakdown = useCallback((killingMachine) => {
+    const kmOnFS = killingMachine.km_on_frost_strike || 0;
+    const kmOnObliterate = killingMachine.km_on_obliterate || 0;
+    const fsPercentage = killingMachine.frost_strike_percentage || 0;
+    const totalKMUsed = kmOnFS + kmOnObliterate;
+
+    if (totalKMUsed === 0) {
+      return null; // Don't show if no KM procs were used
+    }
+
+    let icon;
+    let color;
+    if (fsPercentage >= 0.9) {
+      icon = <i className="fa fa-check green" aria-hidden="true"></i>;
+      color = "green";
+    } else if (fsPercentage >= 0.8) {
+      icon = <i className="fa fa-warning yellow" aria-hidden="true"></i>;
+      color = "yellow";
+    } else {
+      icon = <i className="fa fa-times red" aria-hidden="true"></i>;
+      color = "red";
+    }
+
+    return (
+      <div className={"km-breakdown"}>
+        {icon}
+        KM procs used on Frost Strike:{" "}
+        <span className={color}>
+          {kmOnFS} of {totalKMUsed} ({(fsPercentage * 100).toFixed(1)}%)
+        </span>
+        {kmOnObliterate > 0 && (
+          <span className={"hl"}>, Obliterate: {kmOnObliterate}</span>
+        )}
+      </div>
+    );
+  }, []);
+
+  const formatObliterateDuringRime = useCallback((obliterateDuringRime) => {
+    const badUsages = obliterateDuringRime.bad_usages;
+    const totalObliterates = obliterateDuringRime.total_obliterates;
+
+    if (badUsages === 0) {
+      return (
+        <div className={"obliterate-rime-usage"}>
+          <i className="fa fa-check-circle hl green" aria-hidden="true"></i>
+          You never used Obliterate during Rime procs{" "}
+          <span className={"green"}>(0 bad usages)</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className={"obliterate-rime-usage"}>
+          <i className="fa fa-times red" aria-hidden="true"></i>
+          You used Obliterate during Rime procs{" "}
+          <span className={"red"}>
+            {badUsages} time{badUsages > 1 ? 's' : ''}
+          </span>
+          {totalObliterates > 0 && (
+            <span className={"hl"}> (out of {totalObliterates} total Obliterates)</span>
+          )}
+        </div>
+      );
+    }
+  }, []);
+
+  const formatObliterateDeathRuneUsage = useCallback((obliterateDeathRune) => {
+    const badUsages = obliterateDeathRune.bad_usages;
+    const totalObliterates = obliterateDeathRune.total_obliterates;
+
+    if (badUsages === 0) {
+      return (
+        <div className={"obliterate-death-rune-usage"}>
+          <i className="fa fa-check-circle hl green" aria-hidden="true"></i>
+          You always used optimal rune combinations for Obliterate{" "}
+          <span className={"green"}>(0 suboptimal usages)</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className={"obliterate-death-rune-usage"}>
+          <i className="fa fa-times red" aria-hidden="true"></i>
+          You used suboptimal rune combinations for Obliterate{" "}
+          <span className={"red"}>
+            {badUsages} time{badUsages > 1 ? 's' : ''}
+          </span>
+          {totalObliterates > 0 && (
+            <span className={"hl"}> (out of {totalObliterates} total Obliterates)</span>
+          )}
+        </div>
+      );
+    }
+  }, []);
+
+  const formatPillarOfFrostUsage = useCallback((pillarUsage) => {
+    const numUsed = pillarUsage.num_used;
+    const possibleUsages = pillarUsage.possible_usages;
+    const usagePercentage = pillarUsage.usage_percentage;
+
+    let icon;
+    let colorClass;
+
+    if (usagePercentage >= 1.0) {
+      icon = <i className="fa fa-check green" aria-hidden="true"></i>;
+      colorClass = "green";
+    } else if (usagePercentage >= 0.9) {
+      icon = <i className="fa fa-warning yellow" aria-hidden="true"></i>;
+      colorClass = "yellow";
+    } else {
+      icon = <i className="fa fa-times red" aria-hidden="true"></i>;
+      colorClass = "red";
+    }
+
+    return (
+      <div className={"pillar-of-frost-usage"}>
+        {icon}
+        You used Pillar of Frost{" "}
+        <span className={colorClass}>
+          {numUsed} out of {possibleUsages} possible times
+        </span>
+        <span className={"hl"}> ({(usagePercentage * 100).toFixed(0)}%)</span>
+      </div>
+    );
+  }, []);
+
+  const formatPlagueStrikeDeathRuneUsage = useCallback((plagueStrikeDeathRune) => {
+    const badUsages = plagueStrikeDeathRune.bad_usages;
+    const totalPlagueStrikes = plagueStrikeDeathRune.total_plague_strikes;
+
+    if (badUsages === 0) {
+      return (
+        <div className={"plague-strike-death-rune-usage"}>
+          <i className="fa fa-check green" aria-hidden="true"></i>
+          You never used Plague Strike with Death runes{" "}
+          <span className={"green"}>(0 bad usages)</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className={"plague-strike-death-rune-usage"}>
+          <i className="fa fa-times red" aria-hidden="true"></i>
+          You used Plague Strike with Death runes{" "}
+          <span className={"red"}>
+            {badUsages} time{badUsages > 1 ? 's' : ''}
+          </span>
+          {totalPlagueStrikes > 0 && (
+            <span className={"hl"}> (out of {totalPlagueStrikes} total Plague Strikes)</span>
+          )}
+        </div>
+      );
+    }
+  }, []);
+
+  const formatEmpoweredRuneWeapon = useCallback((erw) => {
+    const numUsages = erw.num_usages;
+    const totalRunesWasted = erw.total_runes_wasted;
+    const totalRpWasted = erw.total_rp_wasted;
+    const avgRunesWasted = erw.average_runes_wasted;
+    const avgRpWasted = erw.average_rp_wasted;
+
+    if (numUsages === 0) {
+      return (
+        <div className={"empowered-rune-weapon"}>
+          <i className="fa fa-info-circle hl" aria-hidden="true"></i>
+          No Empowered Rune Weapon usages detected
+        </div>
+      );
+    }
+
+    let runeIcon, rpIcon;
+    let runeColor, rpColor;
+
+    // Color coding for efficiency
+    if (avgRunesWasted <= 1) {
+      runeIcon = <i className="fa fa-check green" aria-hidden="true"></i>;
+      runeColor = "green";
+    } else if (avgRunesWasted <= 2) {
+      runeIcon = <i className="fa fa-warning yellow" aria-hidden="true"></i>;
+      runeColor = "yellow";
+    } else {
+      runeIcon = <i className="fa fa-times red" aria-hidden="true"></i>;
+      runeColor = "red";
+    }
+
+    if (avgRpWasted <= 5) {
+      rpIcon = <i className="fa fa-check green" aria-hidden="true"></i>;
+      rpColor = "green";
+    } else if (avgRpWasted <= 15) {
+      rpIcon = <i className="fa fa-warning yellow" aria-hidden="true"></i>;
+      rpColor = "yellow";
+    } else {
+      rpIcon = <i className="fa fa-times red" aria-hidden="true"></i>;
+      rpColor = "red";
+    }
+
+    return (
+      <div className={"empowered-rune-weapon"}>
+        <div>
+          {runeIcon}
+          Empowered Rune Weapon runes wasted:{" "}
+          <span className={runeColor}>
+            {totalRunesWasted} total
+          </span>
+          <span className={"hl"}> ({avgRunesWasted.toFixed(1)} avg per usage)</span>
+        </div>
+        <div>
+          {rpIcon}
+          Empowered Rune Weapon RP wasted:{" "}
+          <span className={rpColor}>
+            {totalRpWasted} total
+          </span>
+          <span className={"hl"}> ({avgRpWasted.toFixed(1)} avg per usage)</span>
+        </div>
       </div>
     );
   }, []);
@@ -564,12 +800,18 @@ const Summary = () => {
             <div className="analysis-section">
               <h3>Speed</h3>
               {formatGCDLatency(summary.gcd_latency, isUnholy)}
-              {summary.killing_machine && formatKillingMachine(summary.killing_machine)}
+              {summary.killing_machine && formatKillingMachineSpeed(summary.killing_machine)}
             </div>
 
             <div className="analysis-section">
               <h3>Rotation</h3>
-              {summary.obliterate && formatCPM(summary.obliterate.cpm, summary.obliterate.target_cpm, "Obliterate")}
+              {summary.killing_machine && formatKillingMachineRotation(summary.killing_machine)}
+              {summary.killing_machine && formatKillingMachineBreakdown(summary.killing_machine)}
+              {summary.obliterate_during_rime && formatObliterateDuringRime(summary.obliterate_during_rime)}
+              {summary.obliterate_death_rune_usage && formatObliterateDeathRuneUsage(summary.obliterate_death_rune_usage)}
+              {summary.plague_strike_death_rune_usage && formatPlagueStrikeDeathRuneUsage(summary.plague_strike_death_rune_usage)}
+              {summary.pillar_of_frost_usage && formatPillarOfFrostUsage(summary.pillar_of_frost_usage)}
+              {summary.empowered_rune_weapon && formatEmpoweredRuneWeapon(summary.empowered_rune_weapon)}
               {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
               {summary.dark_transformation_uptime !== undefined && formatUpTime(summary.dark_transformation_uptime, "Dark Transformation", false, summary.dark_transformation_max_uptime)}
               {summary.melee_uptime !== undefined && formatUpTime(summary.melee_uptime, "Melee")}
@@ -586,17 +828,18 @@ const Summary = () => {
               {summary.rime && formatRime(summary.rime)}
             </div>
 
+            {summary.soul_reaper && (
+              <div className="analysis-section">
+                <SoulReaperAnalysis soulReaper={summary.soul_reaper} />
+              </div>
+            )}
+
             {summary.outbreak_snapshots && (
               <div className="analysis-section">
                 <OutbreakAnalysis outbreak_snapshots={summary.outbreak_snapshots} />
               </div>
             )}
 
-            {summary.soul_reaper && (
-              <div className="analysis-section">
-                <SoulReaperAnalysis soulReaper={summary.soul_reaper} />
-              </div>
-            )}
 
             <div className="analysis-section">
               <h3>Miscellaneous</h3>

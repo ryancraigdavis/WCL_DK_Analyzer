@@ -281,6 +281,22 @@ class Analyzer:
                         }
                         events.append(timeline_event)
 
+                # Add KM usage timing events for frost analysis
+                from analysis.frost_analysis import KMAnalyzer, ObliterateAnalyzer, PlagueStrikeAnalyzer
+                if isinstance(analyzer, KMAnalyzer):
+                    for km_event in analyzer._km_usage_events:
+                        events.append(km_event)
+
+                # Add Obliterate death rune usage events for frost analysis
+                if isinstance(analyzer, ObliterateAnalyzer):
+                    for death_rune_event in analyzer._death_rune_events:
+                        events.append(death_rune_event)
+
+                # Add Plague Strike death rune usage events for frost analysis
+                if isinstance(analyzer, PlagueStrikeAnalyzer):
+                    for death_rune_event in analyzer._death_rune_events:
+                        events.append(death_rune_event)
+
         # Sort all events by timestamp
         events.sort(key=lambda x: x["timestamp"])
         return events
