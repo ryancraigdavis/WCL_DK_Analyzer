@@ -17,7 +17,9 @@ from analysis.core_analysis import (
     EmpoweredRuneWeaponAnalyzer,
     BuffUptimeAnalyzer,
     ArmyAnalyzer,
+    PlagueLeechAnalyzer,
 )
+from analysis.unholy_analysis import BloodPlagueAnalyzer, FrostFeverAnalyzer
 from console_table import console
 from report import Fight
 
@@ -594,25 +596,24 @@ class ObliterateAnalyzer(BaseAnalyzer):
                 # Obliterate costs 1 Unholy + 1 Frost, but Death runes can substitute for either
                 total_consumed = unholy_consumed + frost_consumed + death_consumed
 
-                # Bad usage: using non-Death runes when Death runes are available
-                if total_consumed == 2 and death_available > 0:
+                # Bad usage: any Obliterate that doesn't use an Unholy rune is suboptimal
+                if total_consumed == 2:
                     is_bad_usage = False
                     message_parts = []
 
-                    # Case 1: Used Frost + Unholy when Death was available (should use Death + Unholy)
-                    if frost_consumed > 0 and unholy_consumed > 0 and death_consumed == 0:
-                        is_bad_usage = True
-                        message_parts.append(f"Used Frost+Unholy instead of Death+Unholy")
+                    # Only valid combinations are those that include an Unholy rune:
+                    # - Death + Unholy ✅
+                    # - Frost + Unholy ✅
+                    # Everything else is bad:
+                    # - Death + Frost ❌
+                    # - Death + Death ❌
 
-                    # Case 2: Used 2 Death runes when other runes were available
-                    elif death_consumed == 2 and (unholy_available > 0 or frost_available > 0):
+                    if unholy_consumed == 0:
                         is_bad_usage = True
-                        message_parts.append(f"Used 2 Death runes unnecessarily")
-
-                    # Case 3: Used Death + Frost when Unholy was available
-                    elif death_consumed > 0 and frost_consumed > 0 and unholy_available > 0:
-                        is_bad_usage = True
-                        message_parts.append(f"Used Death+Frost instead of Death+Unholy")
+                        if death_consumed == 2:
+                            message_parts.append(f"Used 2 Death runes instead of Death+Unholy or Frost+Unholy")
+                        elif death_consumed > 0 and frost_consumed > 0:
+                            message_parts.append(f"Used Death+Frost instead of Death+Unholy or Frost+Unholy")
 
                     if is_bad_usage:
                         self._obliterates_with_death_runes += 1
@@ -791,6 +792,14 @@ class FrostAnalysisScorer(AnalysisScorer):
             DiseaseAnalyzer: {
                 "weight": 2,
             },
+            BloodPlagueAnalyzer: {
+                "weight": 3,
+                "exponent_factor": 1.5,
+            },
+            FrostFeverAnalyzer: {
+                "weight": 3,
+                "exponent_factor": 1.5,
+            },
             HowlingBlastAnalyzer: {
                 "weight": 0.5,
             },
@@ -835,6 +844,10 @@ class FrostAnalysisScorer(AnalysisScorer):
             EmpoweredRuneWeaponAnalyzer: {
                 "weight": 1,
             },
+            PlagueLeechAnalyzer: {
+                "weight": 2,
+                "exponent_factor": 1.5,
+            },
         }
 
     def report(self):
@@ -851,8 +864,11 @@ class FrostAnalysisConfig(CoreAnalysisConfig):
 
     def get_analyzers(self, fight: Fight, buff_tracker, dead_zone_analyzer, items):
         dead_zones = dead_zone_analyzer.get_dead_zones()
+        combatant_info = fight.get_combatant_info(fight.source.id)
         return super().get_analyzers(fight, buff_tracker, dead_zone_analyzer, items) + [
             DiseaseAnalyzer(fight.encounter.name, fight.duration),
+            BloodPlagueAnalyzer(fight.duration, dead_zones),
+            FrostFeverAnalyzer(fight.duration, dead_zones),
             KMAnalyzer(),
             HowlingBlastAnalyzer(),
             RimeAnalyzer(buff_tracker),
@@ -861,6 +877,7 @@ class FrostAnalysisConfig(CoreAnalysisConfig):
             PillarOfFrostAnalyzer(fight.duration),
             PlagueStrikeAnalyzer(),
             ArmyAnalyzer(fight.duration, buff_tracker, dead_zones, items),
+            PlagueLeechAnalyzer(fight.duration, combatant_info),
         ]
 
     def get_scorer(self, analyzers):

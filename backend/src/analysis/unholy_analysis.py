@@ -25,6 +25,7 @@ from analysis.core_analysis import (
     RuneHasteTracker,
     SoulReaperAnalyzer,
     ArmyAnalyzer,
+    PlagueLeechAnalyzer,
 )
 from analysis.items import ItemPreprocessor
 from report import Fight
@@ -1276,6 +1277,10 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "weight": 3,
                 "exponent_factor": exponent_factor,
             },
+            PlagueLeechAnalyzer: {
+                "weight": 2,
+                "exponent_factor": exponent_factor,
+            },
         }
 
     def report(self):
@@ -1310,6 +1315,7 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             FesteringStrikeTracker(),
             SoulReaperAnalyzer(fight.duration, fight.end_time),
             OutbreakSnapshotTracker(buff_tracker, combatant_info),
+            PlagueLeechAnalyzer(fight.duration, combatant_info),
             # AMSAnalyzer(fight.end_time)
         ]
 
