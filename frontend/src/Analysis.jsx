@@ -244,28 +244,6 @@ const Summary = () => {
       </div>
     );
   }, []);
-  const formatDiseases = useCallback((diseasesDropped) => {
-    const numDiseasesDropped = diseasesDropped.num_diseases_dropped;
-
-    if (numDiseasesDropped > 0) {
-      return (
-        <div className={"diseases-dropped"}>
-          <i className="fa fa-times red" aria-hidden="true"></i>
-          You dropped diseases{" "}
-          <span className={"hl"}>{numDiseasesDropped}</span> times on boss
-          targets
-        </div>
-      );
-    } else {
-      return (
-        <div className={"diseases-dropped"}>
-          <i className="fa fa-check green" aria-hidden="true"></i>
-          Nice work, you didn't drop diseases on boss targets before the last 10
-          seconds of the fight!
-        </div>
-      );
-    }
-  }, []);
 
   const formatFlask = useCallback((flaskUsage) => {
     const hasFlask = flaskUsage.has_flask;
@@ -391,7 +369,7 @@ const Summary = () => {
     if (badUsages === 0) {
       return (
         <div className={"obliterate-rime-usage"}>
-          <i className="fa fa-check-circle hl green" aria-hidden="true"></i>
+          <i className="fa fa-check green" aria-hidden="true"></i>
           You never used Obliterate during Rime procs{" "}
           <span className={"green"}>(0 bad usages)</span>
         </div>
@@ -499,6 +477,56 @@ const Summary = () => {
     }
   }, []);
 
+  const formatPlagueLeech = useCallback((plagueLeech, isUnholy = false) => {
+    if (!plagueLeech.has_talent) {
+      return null; // Don't show if player doesn't have the talent
+    }
+
+    const numUsed = plagueLeech.num_actual;
+    const numPossible = plagueLeech.num_possible;
+    const usagePercentage = plagueLeech.usage_percentage;
+
+    if (isUnholy) {
+      // Informational display for Unholy - no performance judgments
+      return (
+        <div className={"plague-leech-usage"}>
+          <i className="fa fa-info hl" aria-hidden="true"></i>
+          You used Plague Leech{" "}
+          <span className={"hl"}>
+            {numUsed} out of {numPossible} possible times
+          </span>
+          <span className={"hl"}> ({(usagePercentage * 100).toFixed(0)}%)</span>
+        </div>
+      );
+    }
+
+    // Performance-based display for Frost
+    let icon;
+    let colorClass;
+
+    if (usagePercentage >= 0.9) {
+      icon = <i className="fa fa-check green" aria-hidden="true"></i>;
+      colorClass = "green";
+    } else if (usagePercentage >= 0.7) {
+      icon = <i className="fa fa-warning yellow" aria-hidden="true"></i>;
+      colorClass = "yellow";
+    } else {
+      icon = <i className="fa fa-times red" aria-hidden="true"></i>;
+      colorClass = "red";
+    }
+
+    return (
+      <div className={"plague-leech-usage"}>
+        {icon}
+        You used Plague Leech{" "}
+        <span className={colorClass}>
+          {numUsed} out of {numPossible} possible times
+        </span>
+        <span className={"hl"}> ({(usagePercentage * 100).toFixed(0)}%)</span>
+      </div>
+    );
+  }, []);
+
   const formatEmpoweredRuneWeapon = useCallback((erw) => {
     const numUsages = erw.num_usages;
     const totalRunesWasted = erw.total_runes_wasted;
@@ -563,25 +591,6 @@ const Summary = () => {
     );
   }, []);
 
-  const formatHowlingBlast = useCallback((howlingBlast) => {
-    const numBadUsages = howlingBlast.num_bad_usages;
-
-    if (numBadUsages === 0) {
-      return (
-        <div className={"howling-blast"}>
-          <i className="fa fa-check green" aria-hidden="true"></i>
-          You always used Howling Blast with Rime or on 3+ targets
-        </div>
-      );
-    }
-    return (
-      <div className={"howling-blast"}>
-        <i className="fa fa-times red" aria-hidden="true"></i>
-        You used Howling Blast <span className={"hl"}>{numBadUsages}</span>{" "}
-        times without Rime or on less than 3 targets
-      </div>
-    );
-  }, []);
 
   const formatPotions = useCallback((potions) => {
     const potionsUsed = potions.potions_used;
@@ -603,51 +612,6 @@ const Summary = () => {
     );
   }, []);
 
-  const formatUA = useCallback((UA) => {
-    const numActual = UA.num_actual;
-    const numPossible = UA.num_possible;
-    const windows = UA.windows;
-
-    const formatWindows = () => {
-      return (
-        <div className={"windows"}>
-          {windows.map((window, i) => {
-            let icon = <i className="fa fa-times red" aria-hidden="true" />;
-            if (window.num_actual === window.num_possible) {
-              icon = <i className="fa fa-check green" aria-hidden="true" />;
-            }
-
-            return (
-              <div key={i} className={"window"}>
-                {icon}
-                Hit{" "}
-                <span className={"hl"}>
-                  {window.num_actual} of {window.num_possible}
-                </span>{" "}
-                Obliterates {window.with_erw ? "(with ERW) " : ""}
-              </div>
-            );
-          })}
-        </div>
-      );
-    };
-
-    let icon = <i className="fa fa-times red" aria-hidden="true" />;
-    if (numActual === numPossible) {
-      icon = <i className="fa fa-check green" aria-hidden="true" />;
-    }
-    return (
-      <div className={"unbreakable-armor-analysis"}>
-        {icon}
-        You used Unbreakable Armor{" "}
-        <span className={"hl"}>
-          {numActual} of {numPossible}
-        </span>{" "}
-        possible times. Within those windows:
-        {formatWindows()}
-      </div>
-    );
-  }, []);
 
   const formatRunicPower = useCallback((runicPower) => {
     const overcapTimes = runicPower.overcap_times
@@ -672,19 +636,6 @@ const Summary = () => {
     );
   }, []);
 
-  const formatRime = useCallback(rime => {
-    const numTotal = rime.num_total
-    const numUsed = rime.num_used
-    return (
-      <div className={"rime-analysis"}>
-        <i className="fa fa-info hl" aria-hidden="true"></i>
-        You used your Rime procs <span className={"hl"}>
-          {numUsed} of {numTotal}
-        </span>{" "}
-        times
-      </div>
-    )
-  }, [])
 
   const formatFesteringStrikeWaste = useCallback(festeringStrikeWaste => {
     const oneDeathRune = festeringStrikeWaste.one_death_rune_casts
@@ -765,7 +716,7 @@ const Summary = () => {
     dps = "n/a"
   }
   const summary = data.analysis;
-  const isUnholy = data.spec === "Frost"
+  const isUnholy = data.spec === "Unholy"
 
   return (
     <div className={"analysis-summary"}>
@@ -806,28 +757,37 @@ const Summary = () => {
             </div>
 
             <div className="analysis-section">
-              <h3>Rotation</h3>
-              {summary.killing_machine && formatKillingMachineRotation(summary.killing_machine)}
-              {summary.killing_machine && formatKillingMachineBreakdown(summary.killing_machine)}
-              {summary.obliterate_during_rime && formatObliterateDuringRime(summary.obliterate_during_rime)}
-              {summary.obliterate_death_rune_usage && formatObliterateDeathRuneUsage(summary.obliterate_death_rune_usage)}
-              {summary.plague_strike_death_rune_usage && formatPlagueStrikeDeathRuneUsage(summary.plague_strike_death_rune_usage)}
-              {summary.pillar_of_frost_usage && formatPillarOfFrostUsage(summary.pillar_of_frost_usage)}
+              <h3>General</h3>
+              {summary.plague_leech && formatPlagueLeech(summary.plague_leech, isUnholy)}
               {summary.empowered_rune_weapon && formatEmpoweredRuneWeapon(summary.empowered_rune_weapon)}
-              {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
-              {summary.dark_transformation_uptime !== undefined && formatUpTime(summary.dark_transformation_uptime, "Dark Transformation", false, summary.dark_transformation_max_uptime)}
               {summary.melee_uptime !== undefined && formatUpTime(summary.melee_uptime, "Melee")}
-              {summary.unbreakable_armor && formatUA(summary.unbreakable_armor)}
               {summary.blood_plague_uptime !== undefined && formatUpTime(summary.blood_plague_uptime, "Blood Plague")}
               {summary.frost_fever_uptime !== undefined && formatUpTime(summary.frost_fever_uptime, "Frost Fever")}
-              {summary.unholy_presence_uptime !== undefined && formatUpTime(summary.unholy_presence_uptime, "Unholy Presence")}
-              {summary.blood_charge_caps && formatBloodChargeCaps(summary.blood_charge_caps)}
-              {summary.festering_strike_waste && formatFesteringStrikeWaste(summary.festering_strike_waste)}
-              {summary.diseases_dropped && formatDiseases(summary.diseases_dropped)}
-              {summary.howling_blast_bad_usages && formatHowlingBlast(summary.howling_blast_bad_usages)}
               {summary.runic_power && formatRunicPower(summary.runic_power)}
-              {summary.rime && formatRime(summary.rime)}
+              {summary.blood_charge_caps && formatBloodChargeCaps(summary.blood_charge_caps)}
             </div>
+
+            {isUnholy && (
+              <div className="analysis-section">
+                <h3>Unholy Rotation</h3>
+                {summary.dnd !== undefined && formatUpTime(summary.dnd.uptime, "Death and Decay", false, summary.dnd.max_uptime)}
+                {summary.dark_transformation_uptime !== undefined && formatUpTime(summary.dark_transformation_uptime, "Dark Transformation", false, summary.dark_transformation_max_uptime)}
+                {summary.unholy_presence_uptime !== undefined && formatUpTime(summary.unholy_presence_uptime, "Unholy Presence")}
+                {summary.festering_strike_waste && formatFesteringStrikeWaste(summary.festering_strike_waste)}
+              </div>
+            )}
+
+            {!isUnholy && (
+              <div className="analysis-section">
+                <h3>Frost Rotation</h3>
+                {summary.killing_machine && formatKillingMachineRotation(summary.killing_machine)}
+                {summary.killing_machine && formatKillingMachineBreakdown(summary.killing_machine)}
+                {summary.obliterate_during_rime && formatObliterateDuringRime(summary.obliterate_during_rime)}
+                {summary.obliterate_death_rune_usage && formatObliterateDeathRuneUsage(summary.obliterate_death_rune_usage)}
+                {summary.plague_strike_death_rune_usage && formatPlagueStrikeDeathRuneUsage(summary.plague_strike_death_rune_usage)}
+                {summary.pillar_of_frost_usage && formatPillarOfFrostUsage(summary.pillar_of_frost_usage)}
+              </div>
+            )}
 
             {summary.soul_reaper && (
               <div className="analysis-section">
@@ -840,7 +800,6 @@ const Summary = () => {
                 <OutbreakAnalysis outbreak_snapshots={summary.outbreak_snapshots} />
               </div>
             )}
-
 
             <div className="analysis-section">
               <h3>Miscellaneous</h3>

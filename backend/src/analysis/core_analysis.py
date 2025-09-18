@@ -2112,6 +2112,77 @@ class ArmyAnalyzer(BaseAnalyzer):
         }
 
 
+class PlagueLeechAnalyzer(BaseAnalyzer):
+    def __init__(self, fight_duration, combatant_info):
+        self._fight_duration = fight_duration
+        self._plague_leech_casts = []
+        self._has_plague_leech_talent = False
+
+        # Check if player has Plague Leech talent (talent ID 123693)
+        talents = combatant_info.get('talents', [])
+        for talent in talents:
+            if talent.get('id') == 123693:
+                self._has_plague_leech_talent = True
+                break
+
+    def add_event(self, event):
+        # Only track if player has the talent
+        if not self._has_plague_leech_talent:
+            return
+
+        # Track Plague Leech casts (ability ID 123693)
+        if event["type"] == "cast" and event.get("abilityGameID") == 123693:
+            self._plague_leech_casts.append(event["timestamp"])
+
+    @property
+    def has_plague_leech_talent(self):
+        return self._has_plague_leech_talent
+
+    @property
+    def possible_plague_leeches(self):
+        if not self._has_plague_leech_talent:
+            return 0
+        # Plague Leech has 25 second cooldown
+        # First cast available around 30 seconds (when first diseases are dropping)
+        # Then every 25 seconds after that
+        if self._fight_duration < 30000:  # Less than 30 seconds, no Plague Leech expected
+            return 0
+        return max(1 + (self._fight_duration - 30000) // 25000, len(self._plague_leech_casts))
+
+    @property
+    def actual_plague_leeches(self):
+        return len(self._plague_leech_casts)
+
+    @property
+    def usage_percentage(self):
+        if not self._has_plague_leech_talent or self.possible_plague_leeches == 0:
+            return 0
+        return self.actual_plague_leeches / self.possible_plague_leeches
+
+    def score(self):
+        if not self._has_plague_leech_talent:
+            return 1  # Perfect score if talent not taken (no penalty)
+
+        usage_pct = self.usage_percentage
+        if usage_pct >= 0.9:
+            return 1
+        elif usage_pct >= 0.7:
+            return 0.8
+        else:
+            return 0.5
+
+    def report(self):
+        return {
+            "plague_leech": {
+                "has_talent": self._has_plague_leech_talent,
+                "num_actual": self.actual_plague_leeches,
+                "num_possible": self.possible_plague_leeches,
+                "usage_percentage": self.usage_percentage,
+                "cast_timestamps": self._plague_leech_casts,
+            }
+        }
+
+
 class CoreAnalysisScorer(AnalysisScorer):
     def get_score_weights(self):
         return {
