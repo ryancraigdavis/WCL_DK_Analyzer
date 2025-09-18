@@ -1,13 +1,14 @@
 import functools
 import itertools
 from collections import defaultdict
-from typing import Optional
+from typing import Optional, List
 
 from analysis.base import (
     AnalysisScorer,
     BaseAnalyzer,
     BasePreprocessor,
     Window,
+    ScoreWeight,
     calculate_uptime,
     range_overlap,
 )
@@ -1806,6 +1807,309 @@ class BuffUptimeAnalyzer(BaseAnalyzer):
 
     def score(self):
         return self.uptime()
+
+
+class ArmyWindow(Window):
+    def __init__(
+        self,
+        start,
+        fight_duration,
+        buff_tracker: BuffTracker,
+        ignore_windows,
+        items,
+    ):
+        self.start = start
+        # Army of the Dead lasts for 40 seconds
+        self.end = min(start + 40000, fight_duration)
+        self._army_first_attack = None
+
+        # Dynamic buff tracking for MoP (similar to gargoyle/raise dead)
+        self._synapse_springs_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Synapse Springs",
+            self.start,
+            max_duration=10000 - 25,
+        )
+        self._fallen_crusader_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Unholy Strength",
+            self.start,
+            max_duration=15000 - 25,
+        )
+        self._potion_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Potion of Mogu Power",
+            self.start,
+            max_duration=25000 - 25,
+        )
+        self._bloodfury_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Blood Fury",
+            self.start,
+            max_duration=15000 - 25,
+        )
+        self._berserking_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Berserking",
+            self.start,
+            max_duration=10000 - 25,
+        )
+        self._bloodlust_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            {"Bloodlust", "Heroism", "Time Warp"},
+            self.start,
+            max_duration=40000 - 25,
+        )
+        self._pillar_of_frost_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Pillar of Frost",
+            self.start,
+            max_duration=20000 - 25,
+        )
+
+        # Collect all uptimes for event passing
+        self._uptimes = [
+            self._synapse_springs_uptime,
+            self._fallen_crusader_uptime,
+            self._potion_uptime,
+            self._bloodfury_uptime,
+            self._berserking_uptime,
+            self._bloodlust_uptime,
+            self._pillar_of_frost_uptime,
+        ]
+
+        self.num_attacks = 0
+        self.total_damage = 0
+        self._items = items
+        self._all_trinkets = []
+        self.trinket_uptimes = []
+        self._army_source_ids = []  # Track multiple army ghoul source IDs
+
+        # Track trinkets that affect pets
+        for trinket in self._items.trinkets:
+            if trinket.uptime_ghoul:  # Reuse the ghoul trinket flag
+                self._all_trinkets.append(trinket)
+
+        for trinket in self._all_trinkets:
+            uptime = BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                trinket.buff_name,
+                self.start,
+                max_duration=trinket.proc_duration - 25,
+            )
+            self._uptimes.append(uptime)
+            self.trinket_uptimes.append({
+                "trinket": trinket,
+                "uptime": uptime,
+            })
+
+    def _set_army_first_attack(self, event):
+        self._army_first_attack = event["timestamp"]
+        # Set start time for all uptime analyzers when army first attacks
+        for uptime in self._uptimes:
+            uptime.set_start_time(event["timestamp"])
+
+    # Properties for frontend compatibility
+    @property
+    def synapse_springs_uptime(self):
+        return self._synapse_springs_uptime.uptime()
+
+    @property
+    def fallen_crusader_uptime(self):
+        return self._fallen_crusader_uptime.uptime()
+
+    @property
+    def potion_uptime(self):
+        return self._potion_uptime.uptime()
+
+    @property
+    def bloodfury_uptime(self):
+        return self._bloodfury_uptime.uptime()
+
+    @property
+    def berserking_uptime(self):
+        return self._berserking_uptime.uptime()
+
+    @property
+    def bloodlust_uptime(self):
+        return self._bloodlust_uptime.uptime()
+
+    @property
+    def pillar_of_frost_uptime(self):
+        return self._pillar_of_frost_uptime.uptime()
+
+    @property
+    def trinket_snapshots(self):
+        # Convert trinket uptimes to snapshot-style format for frontend compatibility
+        return [
+            {
+                "trinket": trinket_data["trinket"],
+                "name": trinket_data["trinket"].name,
+                "icon": trinket_data["trinket"].icon,
+                "did_snapshot": trinket_data["uptime"].uptime() > 0,
+                "uptime": trinket_data["uptime"].uptime(),
+            }
+            for trinket_data in self.trinket_uptimes
+        ]
+
+    def add_event(self, event):
+        # Pass events to all uptime analyzers
+        for uptime in self._uptimes:
+            uptime.add_event(event)
+
+        # Track army attacks and damage using tracked source IDs
+        if self._army_source_ids and event.get("sourceID") in self._army_source_ids:
+            if (
+                event["type"] in ("cast", "startcast", "damage")
+                and self._army_first_attack is None
+            ):
+                self._set_army_first_attack(event)
+
+            if event["type"] == "damage":
+                self.num_attacks += 1
+                self.total_damage += event["amount"]
+
+    def score(self):
+        # Score based on buff uptime during army window
+        army_duration = self.end - self.start  # 40 seconds max
+
+        return ScoreWeight.calculate(
+            ScoreWeight(self.synapse_springs_uptime / army_duration, 2),
+            ScoreWeight(self.fallen_crusader_uptime / army_duration, 3),
+            ScoreWeight(self.potion_uptime / army_duration, 3),
+            ScoreWeight(self.pillar_of_frost_uptime / army_duration, 2),  # Lower weight since not always available
+            # Performance score based on attacks (expect ~80 attacks in 40s from 8 ghouls)
+            ScoreWeight(min(1, self.num_attacks / 80), 4),
+            # Trinket uptime score
+            ScoreWeight(
+                sum(t["uptime"] for t in self.trinket_snapshots) /
+                (army_duration * len(self.trinket_snapshots)) if self.trinket_snapshots else 0,
+                len(self.trinket_snapshots) * 2,
+            ),
+            # Blood Fury uptime score
+            ScoreWeight(
+                self.bloodfury_uptime / army_duration if self._bloodfury_uptime else 0,
+                2 if self._bloodfury_uptime else 0,
+            ),
+            # Berserking uptime score
+            ScoreWeight(
+                self.berserking_uptime / army_duration if self._berserking_uptime else 0,
+                2 if self._berserking_uptime else 0,
+            ),
+            # Bloodlust uptime score
+            ScoreWeight(
+                self.bloodlust_uptime / army_duration if self._bloodlust_uptime else 0,
+                3 if self._bloodlust_uptime else 0,
+            ),
+        )
+
+
+class ArmyAnalyzer(BaseAnalyzer):
+    INCLUDE_PET_EVENTS = True
+
+    def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
+        self.windows: List[ArmyWindow] = []
+        self._window = None
+        self._buff_tracker = buff_tracker
+        self._fight_duration = fight_duration
+        self._ignore_windows = ignore_windows
+        self._items = items
+
+    def add_event(self, event):
+        # Check for Army of the Dead by summon events (first summon creates the window)
+        if event["type"] == "summon" and event.get("abilityGameID") in (42650, 42651):
+            # Create window only on the first summon (if no window exists yet)
+            if not self._window:
+                self._window = ArmyWindow(
+                    event["timestamp"],
+                    self._fight_duration,
+                    self._buff_tracker,
+                    self._ignore_windows,
+                    self._items,
+                )
+                self.windows.append(self._window)
+
+            # Track this army ghoul's source ID
+            army_ghoul_id = event.get("targetID")
+            if army_ghoul_id:
+                self._window._army_source_ids.append(army_ghoul_id)
+
+        if not self._window:
+            return
+
+        # Only process events within the army window timeframe
+        if event["timestamp"] <= self._window.end:
+            self._window.add_event(event)
+
+    @property
+    def possible_armies(self):
+        # Army of the Dead has a 10 minute cooldown in MoP
+        return max(1 + (self._fight_duration - 10000) // 600000, len(self.windows))
+
+    def score(self):
+        window_score = sum(window.score() for window in self.windows)
+        return ScoreWeight.calculate(
+            ScoreWeight(
+                window_score / self.possible_armies, 5 * self.possible_armies
+            ),
+        )
+
+    def report(self):
+        return {
+            "army_dynamic": {
+                "score": self.score(),
+                "num_possible": self.possible_armies,
+                "num_actual": len(self.windows),
+                "average_damage": (
+                    sum(window.total_damage for window in self.windows)
+                    / len(self.windows)
+                    if self.windows
+                    else 0
+                ),
+                "windows": [
+                    {
+                        "score": window.score(),
+                        "damage": window.total_damage,
+                        "synapse_springs_uptime": window.synapse_springs_uptime,
+                        "potion_uptime": window.potion_uptime,
+                        "fallen_crusader_uptime": window.fallen_crusader_uptime,
+                        "bloodfury_uptime": window.bloodfury_uptime,
+                        "berserking_uptime": window.berserking_uptime,
+                        "bloodlust_uptime": window.bloodlust_uptime,
+                        "pillar_of_frost_uptime": window.pillar_of_frost_uptime,
+                        "num_attacks": window.num_attacks,
+                        "start": window.start,
+                        "end": window.end,
+                        "trinket_snapshots": [
+                            {
+                                "name": t["trinket"].name,
+                                "did_snapshot": t["did_snapshot"],
+                                "icon": t["trinket"].icon,
+                                "uptime": t["uptime"],
+                            }
+                            for t in window.trinket_snapshots
+                        ],
+                    }
+                    for window in self.windows
+                ],
+            }
+        }
 
 
 class CoreAnalysisScorer(AnalysisScorer):

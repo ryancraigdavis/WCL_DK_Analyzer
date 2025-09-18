@@ -1,4 +1,6 @@
-from analysis.base import AnalysisScorer, BaseAnalyzer, Window
+from typing import List
+
+from analysis.base import AnalysisScorer, BaseAnalyzer, Window, ScoreWeight
 from analysis.core_analysis import (
     BuffTracker,
     CoreAnalysisConfig,
@@ -13,6 +15,8 @@ from analysis.core_analysis import (
     BloodChargeCapAnalyzer,
     SoulReaperAnalyzer,
     EmpoweredRuneWeaponAnalyzer,
+    BuffUptimeAnalyzer,
+    ArmyAnalyzer,
 )
 from console_table import console
 from report import Fight
@@ -242,27 +246,303 @@ class RimeAnalyzer(BaseAnalyzer):
         }
 
 
+class RaiseDeadWindow(Window):
+    def __init__(
+        self,
+        start,
+        fight_duration,
+        buff_tracker: BuffTracker,
+        ignore_windows,
+        items,
+    ):
+        self.start = start
+        # Frost ghoul lasts for 60 seconds (or until dismissed/killed)
+        self.end = min(start + 60000, fight_duration)
+        self._ghoul_first_attack = None
+
+        # Dynamic buff tracking for MoP (similar to gargoyle)
+        self._synapse_springs_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Synapse Springs",
+            self.start,
+            max_duration=10000 - 25,
+        )
+        self._fallen_crusader_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Unholy Strength",
+            self.start,
+            max_duration=15000 - 25,
+        )
+        self._potion_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Potion of Mogu Power",
+            self.start,
+            max_duration=25000 - 25,
+        )
+        self._bloodfury_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Blood Fury",
+            self.start,
+            max_duration=15000 - 25,
+        )
+        self._berserking_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Berserking",
+            self.start,
+            max_duration=10000 - 25,
+        )
+        self._bloodlust_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            {"Bloodlust", "Heroism", "Time Warp"},
+            self.start,
+            max_duration=40000 - 25,
+        )
+        self._pillar_of_frost_uptime = BuffUptimeAnalyzer(
+            self.end,
+            buff_tracker,
+            ignore_windows,
+            "Pillar of Frost",
+            self.start,
+            max_duration=20000 - 25,
+        )
+
+        # Collect all uptimes for event passing
+        self._uptimes = [
+            self._synapse_springs_uptime,
+            self._fallen_crusader_uptime,
+            self._potion_uptime,
+            self._bloodfury_uptime,
+            self._berserking_uptime,
+            self._bloodlust_uptime,
+            self._pillar_of_frost_uptime,
+        ]
+
+        self.num_attacks = 0
+        self.total_damage = 0
+        self._items = items
+        self._all_trinkets = []
+        self.trinket_uptimes = []
+        self._ghoul_source_id = None  # Will be set by the analyzer
+
+        # Track trinkets that affect pets
+        for trinket in self._items.trinkets:
+            if trinket.uptime_ghoul:  # Reuse the ghoul trinket flag
+                self._all_trinkets.append(trinket)
+
+        for trinket in self._all_trinkets:
+            uptime = BuffUptimeAnalyzer(
+                self.end,
+                buff_tracker,
+                ignore_windows,
+                trinket.buff_name,
+                self.start,
+                max_duration=trinket.proc_duration - 25,
+            )
+            self._uptimes.append(uptime)
+            self.trinket_uptimes.append({
+                "trinket": trinket,
+                "uptime": uptime,
+            })
+
+    def _set_ghoul_first_attack(self, event):
+        self._ghoul_first_attack = event["timestamp"]
+        # Set start time for all uptime analyzers when ghoul first attacks
+        for uptime in self._uptimes:
+            uptime.set_start_time(event["timestamp"])
+
+    # Properties for frontend compatibility
+    @property
+    def synapse_springs_uptime(self):
+        return self._synapse_springs_uptime.uptime()
+
+    @property
+    def fallen_crusader_uptime(self):
+        return self._fallen_crusader_uptime.uptime()
+
+    @property
+    def potion_uptime(self):
+        return self._potion_uptime.uptime()
+
+    @property
+    def bloodfury_uptime(self):
+        return self._bloodfury_uptime.uptime()
+
+    @property
+    def berserking_uptime(self):
+        return self._berserking_uptime.uptime()
+
+    @property
+    def bloodlust_uptime(self):
+        return self._bloodlust_uptime.uptime()
+
+    @property
+    def pillar_of_frost_uptime(self):
+        return self._pillar_of_frost_uptime.uptime()
+
+    @property
+    def trinket_snapshots(self):
+        # Convert trinket uptimes to snapshot-style format for frontend compatibility
+        return [
+            {
+                "trinket": trinket_data["trinket"],
+                "name": trinket_data["trinket"].name,
+                "icon": trinket_data["trinket"].icon,
+                "did_snapshot": trinket_data["uptime"].uptime() > 0,
+                "uptime": trinket_data["uptime"].uptime(),
+            }
+            for trinket_data in self.trinket_uptimes
+        ]
+
+    def add_event(self, event):
+        # Pass events to all uptime analyzers
+        for uptime in self._uptimes:
+            uptime.add_event(event)
+
+        # Track ghoul attacks and damage using the tracked sourceID
+        if self._ghoul_source_id and event.get("sourceID") == self._ghoul_source_id:
+            if (
+                event["type"] in ("cast", "startcast", "damage")
+                and self._ghoul_first_attack is None
+            ):
+                self._set_ghoul_first_attack(event)
+
+            if event["type"] == "damage":
+                self.num_attacks += 1
+                self.total_damage += event["amount"]
+
+    def score(self):
+        # Score based on buff uptime during ghoul window
+        ghoul_duration = self.end - self.start  # 60 seconds max
+
+        return ScoreWeight.calculate(
+            ScoreWeight(self.synapse_springs_uptime / ghoul_duration, 2),
+            ScoreWeight(self.fallen_crusader_uptime / ghoul_duration, 3),
+            ScoreWeight(self.potion_uptime / ghoul_duration, 3),
+            ScoreWeight(self.pillar_of_frost_uptime / ghoul_duration, 4),
+            # Performance score based on attacks
+            ScoreWeight(min(1, self.num_attacks / 30), 3), # Expect ~30 attacks in 60s
+            # Trinket uptime score
+            ScoreWeight(
+                sum(t["uptime"] for t in self.trinket_snapshots) /
+                (ghoul_duration * len(self.trinket_snapshots)) if self.trinket_snapshots else 0,
+                len(self.trinket_snapshots) * 2,
+            ),
+            # Blood Fury uptime score
+            ScoreWeight(
+                self.bloodfury_uptime / ghoul_duration if self._bloodfury_uptime else 0,
+                2 if self._bloodfury_uptime else 0,
+            ),
+            # Berserking uptime score
+            ScoreWeight(
+                self.berserking_uptime / ghoul_duration if self._berserking_uptime else 0,
+                2 if self._berserking_uptime else 0,
+            ),
+            # Bloodlust uptime score
+            ScoreWeight(
+                self.bloodlust_uptime / ghoul_duration if self._bloodlust_uptime else 0,
+                3 if self._bloodlust_uptime else 0,
+            ),
+        )
+
+
 class RaiseDeadAnalyzer(BaseAnalyzer):
-    def __init__(self, fight_end_time):
-        self._num_raise_deads = 0
-        self._fight_end_time = fight_end_time
+    INCLUDE_PET_EVENTS = True
+
+    def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
+        self.windows: List[RaiseDeadWindow] = []
+        self._window = None
+        self._buff_tracker = buff_tracker
+        self._fight_duration = fight_duration
+        self._ignore_windows = ignore_windows
+        self._items = items
+        self._ghoul_source_id = None  # Track the ghoul's sourceID
+
+    def add_event(self, event):
+        # Check for Raise Dead by ability ID - 46585 is the Frost DK version
+        if event["type"] in ("cast", "summon") and event.get("abilityGameID") in (46585, 52150):
+            self._window = RaiseDeadWindow(
+                event["timestamp"],
+                self._fight_duration,
+                self._buff_tracker,
+                self._ignore_windows,
+                self._items,
+            )
+            self.windows.append(self._window)
+
+            # Track the ghoul's sourceID from the summon event's targetID
+            if event["type"] == "summon":
+                self._ghoul_source_id = event.get("targetID")
+                self._window._ghoul_source_id = self._ghoul_source_id
+
+        if not self._window:
+            return
+
+        # Only process events within the ghoul window timeframe
+        if event["timestamp"] <= self._window.end:
+            self._window.add_event(event)
 
     @property
     def possible_raise_deads(self):
-        return max(1 + (self._fight_end_time - 20000) // 183000, self._num_raise_deads)
-
-    def add_event(self, event):
-        if event["type"] == "cast" and event["ability"] == "Raise Dead":
-            self._num_raise_deads += 1
+        return max(1 + (self._fight_duration - 20000) // 183000, len(self.windows))
 
     def score(self):
-        return self._num_raise_deads / self.possible_raise_deads
+        window_score = sum(window.score() for window in self.windows)
+        return ScoreWeight.calculate(
+            ScoreWeight(
+                window_score / self.possible_raise_deads, 5 * self.possible_raise_deads
+            ),
+        )
 
     def report(self):
         return {
-            "raise_dead_usage": {
-                "num_usages": self._num_raise_deads,
-                "possible_usages": self.possible_raise_deads,
+            "raise_dead": {
+                "score": self.score(),
+                "num_possible": self.possible_raise_deads,
+                "num_actual": len(self.windows),
+                "average_damage": (
+                    sum(window.total_damage for window in self.windows)
+                    / len(self.windows)
+                    if self.windows
+                    else 0
+                ),
+                "windows": [
+                    {
+                        "score": window.score(),
+                        "damage": window.total_damage,
+                        "synapse_springs_uptime": window.synapse_springs_uptime,
+                        "potion_uptime": window.potion_uptime,
+                        "fallen_crusader_uptime": window.fallen_crusader_uptime,
+                        "bloodfury_uptime": window.bloodfury_uptime,
+                        "berserking_uptime": window.berserking_uptime,
+                        "bloodlust_uptime": window.bloodlust_uptime,
+                        "pillar_of_frost_uptime": window.pillar_of_frost_uptime,
+                        "num_attacks": window.num_attacks,
+                        "start": window.start,
+                        "end": window.end,
+                        "trinket_snapshots": [
+                            {
+                                "name": t["trinket"].name,
+                                "did_snapshot": t["did_snapshot"],
+                                "icon": t["trinket"].icon,
+                                "uptime": t["uptime"],
+                            }
+                            for t in window.trinket_snapshots
+                        ],
+                    }
+                    for window in self.windows
+                ],
             }
         }
 
@@ -519,6 +799,7 @@ class FrostAnalysisScorer(AnalysisScorer):
             },
             RaiseDeadAnalyzer: {
                 "weight": lambda rd: rd.possible_raise_deads,
+                "exponent_factor": 1.5,
             },
             MeleeUptimeAnalyzer: {
                 "weight": 4,
@@ -569,15 +850,17 @@ class FrostAnalysisConfig(CoreAnalysisConfig):
     show_speed = True
 
     def get_analyzers(self, fight: Fight, buff_tracker, dead_zone_analyzer, items):
+        dead_zones = dead_zone_analyzer.get_dead_zones()
         return super().get_analyzers(fight, buff_tracker, dead_zone_analyzer, items) + [
             DiseaseAnalyzer(fight.encounter.name, fight.duration),
             KMAnalyzer(),
             HowlingBlastAnalyzer(),
             RimeAnalyzer(buff_tracker),
-            RaiseDeadAnalyzer(fight.duration),
-            ObliterateAnalyzer(fight.duration, dead_zone_analyzer.get_dead_zones()),
+            RaiseDeadAnalyzer(fight.duration, buff_tracker, dead_zones, items),
+            ObliterateAnalyzer(fight.duration, dead_zones),
             PillarOfFrostAnalyzer(fight.duration),
             PlagueStrikeAnalyzer(),
+            ArmyAnalyzer(fight.duration, buff_tracker, dead_zones, items),
         ]
 
     def get_scorer(self, analyzers):
