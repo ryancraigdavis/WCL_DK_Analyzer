@@ -6,9 +6,11 @@ import FrostRune from "./assets/frost_rune.webp";
 import UnholyRune from "./assets/unholy_rune.webp";
 import DeathRune from "./assets/death_rune.webp";
 import { ArmyAnalysis } from "./ArmyAnalysis.jsx"
+import { ArmyDynamicAnalysis } from "./ArmyDynamicAnalysis.jsx"
 import { GargoyleAnalysis } from "./GargoyleAnalysis"
 import { DarkTransformationAnalysis } from "./DarkTransformationAnalysis"
 import { GhoulAnalysis } from "./GhoulAnalysis.jsx"
+import { RaiseDeadAnalysis } from "./RaiseDeadAnalysis.jsx"
 import { SoulReaperAnalysis } from "./SoulReaperAnalysis.jsx"
 import { OutbreakAnalysis } from "./OutbreakAnalysis.jsx"
 import { Tabs, Tab } from "./Tabs.jsx"
@@ -822,7 +824,6 @@ const Summary = () => {
               {summary.blood_charge_caps && formatBloodChargeCaps(summary.blood_charge_caps)}
               {summary.festering_strike_waste && formatFesteringStrikeWaste(summary.festering_strike_waste)}
               {summary.diseases_dropped && formatDiseases(summary.diseases_dropped)}
-              {summary.raise_dead_usage && formatUsage(summary.raise_dead_usage.num_usages, summary.raise_dead_usage.possible_usages, "Raise Dead")}
               {summary.howling_blast_bad_usages && formatHowlingBlast(summary.howling_blast_bad_usages)}
               {summary.runic_power && formatRunicPower(summary.runic_power)}
               {summary.rime && formatRime(summary.rime)}
@@ -871,6 +872,11 @@ const Summary = () => {
                 <GhoulAnalysis ghoul={summary.ghoul} />
               </div>
             )}
+            {summary.raise_dead && (
+              <div className="analysis-section">
+                <RaiseDeadAnalysis raise_dead={summary.raise_dead} />
+              </div>
+            )}
             {summary.dark_transformation && (
               <div className="analysis-section">
                 <DarkTransformationAnalysis dark_transformation={summary.dark_transformation} />
@@ -884,6 +890,11 @@ const Summary = () => {
             {summary.army && (
               <div className="analysis-section">
                 <ArmyAnalysis army={summary.army} />
+              </div>
+            )}
+            {summary.army_dynamic && (
+              <div className="analysis-section">
+                <ArmyDynamicAnalysis army_dynamic={summary.army_dynamic} />
               </div>
             )}
           </div>

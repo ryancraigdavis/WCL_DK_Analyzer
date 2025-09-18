@@ -24,6 +24,7 @@ from analysis.core_analysis import (
     # T15UptimeAnalyzer,
     RuneHasteTracker,
     SoulReaperAnalyzer,
+    ArmyAnalyzer,
 )
 from analysis.items import ItemPreprocessor
 from report import Fight
@@ -994,28 +995,7 @@ class GhoulAnalyzer(BaseAnalyzer):
         }
 
 
-class ArmyAnalyzer(BaseAnalyzer):
-    INCLUDE_PET_EVENTS = True
-
-    def __init__(self):
-        self.total_damage = 0
-
-    def add_event(self, event):
-        if event["type"] == "damage" and event["source"] == "Army of the Dead":
-            self.total_damage += event["amount"]
-
-    def report(self):
-        return {
-            "army": {
-                "damage": self.total_damage,
-            }
-        }
-
-    def score(self):
-        if self.total_damage >= 100000:
-            return 1
-        else:
-            return self.total_damage / 100000
+# ArmyAnalyzer moved to core_analysis.py for shared use between Frost and Unholy
 
 
 
@@ -1326,7 +1306,7 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             DeathAndDecayUptimeAnalyzer(fight.duration, dead_zones, items),
             GhoulAnalyzer(fight.duration, dead_zones),
             UnholyPresenceUptimeAnalyzer(fight.duration, buff_tracker, dead_zones),
-            ArmyAnalyzer(),
+            ArmyAnalyzer(fight.duration, buff_tracker, dead_zones, items),
             FesteringStrikeTracker(),
             SoulReaperAnalyzer(fight.duration, fight.end_time),
             OutbreakSnapshotTracker(buff_tracker, combatant_info),

@@ -220,6 +220,34 @@ tr:hover {
   margin-bottom: 5px;
 }
 
+.raise-dead-window {
+  margin-top: 12px;
+  > div {
+    margin-bottom: 2px;
+  }
+}
+.raise-dead-window:nth-child(even) {
+  margin-top: 20px;
+}
+.raise-dead-subheader {
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
+
+.army-window {
+  margin-top: 12px;
+  > div {
+    margin-bottom: 2px;
+  }
+}
+.army-window:nth-child(even) {
+  margin-top: 20px;
+}
+.army-subheader {
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
+
 .dark-transformation-window {
   margin-top: 12px;
 
