@@ -1,0 +1,118 @@
+name: Deploy Browser Extensions
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_chrome:
+        description: 'Publish Chrome extension immediately'
+        required: false
+        default: false
+        type: boolean
+      publish_firefox:
+        description: 'Publish Firefox extension immediately'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy-extensions:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
+    - name: Build extension packages
+      run: |
+        cd extensions
+        chmod +x deploy.sh
+        ./deploy.sh
+
+    - name: Upload Chrome Extension
+      env:
+        DOPPLER_TOKEN: ${{ secrets.WCL_DOPPLER_SERVICE_TOKEN }}
+      run: |
+        # Get Chrome Web Store credentials from Doppler
+        CHROME_CLIENT_ID=$(doppler secrets get CHROME_CLIENT_ID --plain)
+        CHROME_CLIENT_SECRET=$(doppler secrets get CHROME_CLIENT_SECRET --plain)
+        CHROME_REFRESH_TOKEN=$(doppler secrets get CHROME_REFRESH_TOKEN --plain)
+        CHROME_EXTENSION_ID=$(doppler secrets get CHROME_EXTENSION_ID --plain)
+
+        # Get OAuth access token
+        ACCESS_TOKEN=$(curl -s -X POST \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "client_id=${CHROME_CLIENT_ID}&client_secret=${CHROME_CLIENT_SECRET}&refresh_token=${CHROME_REFRESH_TOKEN}&grant_type=refresh_token" \
+          https://oauth2.googleapis.com/token | jq -r '.access_token')
+
+        # Upload extension package
+        curl -X PUT \
+          -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+          -H "x-goog-api-version: 2" \
+          -T extensions/chrome_extension.zip \
+          "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}"
+
+        # Publish if requested
+        if [ "${{ inputs.publish_chrome }}" = "true" ]; then
+          curl -X POST \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "x-goog-api-version: 2" \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/${CHROME_EXTENSION_ID}/publish"
+          echo "Chrome extension published!"
+        else
+          echo "Chrome extension uploaded but not published. Publish manually in Chrome Web Store."
+        fi
+
+    - name: Upload Firefox Extension
+      env:
+        DOPPLER_TOKEN: ${{ secrets.WCL_DOPPLER_SERVICE_TOKEN }}
+      run: |
+        # Get Firefox AMO credentials from Doppler
+        FIREFOX_API_KEY=$(doppler secrets get FIREFOX_API_KEY --plain)
+        FIREFOX_API_SECRET=$(doppler secrets get FIREFOX_API_SECRET --plain)
+        FIREFOX_EXTENSION_ID=$(doppler secrets get FIREFOX_EXTENSION_ID --plain)
+
+        # Generate JWT token for authentication
+        HEADER='{"alg":"HS256","typ":"JWT"}'
+        PAYLOAD="{\"iss\":\"${FIREFOX_API_KEY}\",\"jti\":\"$(uuidgen)\",\"iat\":$(date +%s),\"exp\":$(($(date +%s) + 300))}"
+
+        HEADER_B64=$(echo -n "$HEADER" | base64 -w 0 | tr -d '=')
+        PAYLOAD_B64=$(echo -n "$PAYLOAD" | base64 -w 0 | tr -d '=')
+
+        SIGNATURE=$(echo -n "${HEADER_B64}.${PAYLOAD_B64}" | openssl dgst -sha256 -hmac "$FIREFOX_API_SECRET" -binary | base64 -w 0 | tr -d '=')
+        JWT_TOKEN="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
+
+        # Upload extension to Firefox
+        UPLOAD_RESPONSE=$(curl -s -X POST \
+          -H "Authorization: JWT ${JWT_TOKEN}" \
+          -F "upload=@extensions/firefox_extension.zip" \
+          "https://addons.mozilla.org/api/v5/addons/${FIREFOX_EXTENSION_ID}/versions/")
+
+        echo "Firefox upload response: $UPLOAD_RESPONSE"
+
+        # Check if upload was successful and publish if requested
+        UPLOAD_UUID=$(echo "$UPLOAD_RESPONSE" | jq -r '.upload // empty')
+        if [ -n "$UPLOAD_UUID" ] && [ "${{ inputs.publish_firefox }}" = "true" ]; then
+          curl -X POST \
+            -H "Authorization: JWT ${JWT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"upload":"'$UPLOAD_UUID'"}' \
+            "https://addons.mozilla.org/api/v5/addons/${FIREFOX_EXTENSION_ID}/versions/"
+          echo "Firefox extension published!"
+        elif [ -n "$UPLOAD_UUID" ]; then
+          echo "Firefox extension uploaded but not published. Publish manually in Firefox Add-ons."
+        else
+          echo "Firefox upload failed"
+          exit 1
+        fi
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: extension-packages
+        path: |
+          extensions/chrome_extension.zip
+          extensions/firefox_extension.zip
+          extensions/edge_extension.zip
