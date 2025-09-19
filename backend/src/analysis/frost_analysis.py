@@ -887,4 +887,5 @@ class FrostAnalysisConfig(CoreAnalysisConfig):
         return RuneTracker(
             should_convert_blood=False,
             should_convert_frost=False,
+            start_with_death_runes=True,  # MoP: Frost DKs start with 2 death runes
         )
