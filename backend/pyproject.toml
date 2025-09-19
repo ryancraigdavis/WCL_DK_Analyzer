@@ -8,7 +8,7 @@ dependencies = ["requests", "rich", "fastapi", "uvicorn[standard]", "aiohttp", "
 dev = ["pytest", "black", "flake8", "mangum"]
 
 [tool.hatch.envs.default.scripts]
-dev-server = "cd src && uvicorn api:app --reload"
+dev-server = "cd src && uvicorn api:app --reload --host 0.0.0.0 --port 8000"
 # test = "pytest"
 lint = ["black src/", "flake8 src/ --max-line-length 150 --statistics --show-source"]
 lint-check = ["black --check src/", "flake8 src/ --max-line-length 150 --statistics --show-source"]

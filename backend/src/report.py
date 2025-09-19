@@ -209,7 +209,9 @@ class Report:
                 return "Heroic Presence"
             if ability_id in (393387, 24932):
                 return "Leader of the Pack"
-            logging.warning(f"No ability name found for id: {ability_id}")
+            if ability_id == 55610:
+                return "Unholy Aura"
+            logging.debug(f"No ability name found for id: {ability_id}")
             return "Unknown"
 
     def get_ability_icon(self, ability_id: int):
@@ -217,6 +219,8 @@ class Report:
             return "https://wow.zamimg.com/images/wow/icons/large/spell_deathknight_bloodpresence.jpg"
         if ability_id in (48265, 49772):
             return "https://wow.zamimg.com/images/wow/icons/large/spell_deathknight_unholypresence.jpg"
+        if ability_id == 55610:
+            return "https://wow.zamimg.com/images/wow/icons/large/inv_helmet_08.jpg"
         if ability_id == 48263:
             return "https://wow.zamimg.com/images/wow/icons/large/spell_deathknight_frostpresence.jpg"
         if ability_id == 51271:
