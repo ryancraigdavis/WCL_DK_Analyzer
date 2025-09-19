@@ -125,7 +125,7 @@ class DarkTransformationUptimeAnalyzer(BuffUptimeAnalyzer):
 
     @property
     def max_uptime(self):
-        return 0.7
+        return 0.5  # Changed from 0.7 to 0.5 (50% is now considered good)
 
     def score(self):
         return min(1, self.uptime() / self.max_uptime)
@@ -357,21 +357,27 @@ class DarkTransformationWindow(Window):
             self.total_damage += event["amount"]
 
     def score(self):
+        # Check if bloodlust is active during this dark transformation (>0 uptime)
+        has_bloodlust = (self.bl_uptime or 0) > 0
+
+        # Double buff weights when bloodlust is active during dark transformation
+        buff_multiplier = 2.0 if has_bloodlust else 1.0
+
         dark_transformation_score = ScoreWeight.calculate(
-            ScoreWeight(self.berserking_uptime or 0, self.berserking_uptime or 0),
-            ScoreWeight(self.potion_uptime or 0, 3 if self.potion_uptime else 0),
+            ScoreWeight(self.berserking_uptime or 0, (self.berserking_uptime or 0) * buff_multiplier),
+            ScoreWeight(self.potion_uptime or 0, 3 * buff_multiplier if self.potion_uptime else 0),
             ScoreWeight(
                 self.synapse_springs_uptime or 0,
-                3 if self.synapse_springs_uptime else 0,
+                3 * buff_multiplier if self.synapse_springs_uptime else 0,
             ),
             ScoreWeight(
                 self.fallen_crusader_uptime or 0,
-                3 if self.fallen_crusader_uptime else 0,
+                3 * buff_multiplier if self.fallen_crusader_uptime else 0,
             ),
             ScoreWeight(
-                self.unholy_frenzy_uptime or 0, 10 if self.unholy_frenzy_uptime else 0
+                self.unholy_frenzy_uptime or 0, 10 * buff_multiplier if self.unholy_frenzy_uptime else 0
             ),
-            ScoreWeight(self.bl_uptime or 0, 10 if self.bl_uptime else 0),
+            ScoreWeight(self.bl_uptime or 0, 10 if self.bl_uptime else 0),  # Bloodlust base weight, not doubled
             ScoreWeight(
                 sum(
                     [
@@ -384,7 +390,7 @@ class DarkTransformationWindow(Window):
                     sum(1 for t in self.trinket_uptimes if t["uptime"].uptime() > 0)
                     or 1
                 ),
-                sum(2 for t in self.trinket_uptimes if t["uptime"].uptime() > 0),
+                sum(2 * buff_multiplier for t in self.trinket_uptimes if t["uptime"].uptime() > 0),  # Trinkets doubled during bloodlust
             ),
         )
         return dark_transformation_score
@@ -659,29 +665,35 @@ class GargoyleWindow(Window):
         # MoP uses dynamic tracking - score based on uptime percentage
         gargoyle_duration = self.end - self.start  # 30 seconds max
 
+        # Check if bloodlust is active during this gargoyle (>0 uptime)
+        has_bloodlust = self.bloodlust_uptime > 0
+
+        # Double buff weights when bloodlust is active during gargoyle
+        buff_multiplier = 2.0 if has_bloodlust else 1.0
+
         return ScoreWeight.calculate(
-            ScoreWeight(self.synapse_springs_uptime / gargoyle_duration, 2),
-            ScoreWeight(self.fallen_crusader_uptime / gargoyle_duration, 3),
-            ScoreWeight(self.potion_uptime / gargoyle_duration, 3),
+            ScoreWeight(self.synapse_springs_uptime / gargoyle_duration, 2 * buff_multiplier),
+            ScoreWeight(self.fallen_crusader_uptime / gargoyle_duration, 3 * buff_multiplier),
+            ScoreWeight(self.potion_uptime / gargoyle_duration, 3 * buff_multiplier),
             # Performance score based on casts (max ~18 casts in 30s)
             ScoreWeight(self.num_casts / 18, 4),
-            # Trinket uptime score
+            # Trinket uptime score (also doubled during bloodlust)
             ScoreWeight(
                 sum(t["uptime"] for t in self.trinket_snapshots) /
                 (gargoyle_duration * len(self.trinket_snapshots)) if self.trinket_snapshots else 0,
-                len(self.trinket_snapshots) * 2,
+                len(self.trinket_snapshots) * 2 * buff_multiplier,
             ),
-            # Blood Fury uptime score
+            # Blood Fury uptime score (doubled during bloodlust)
             ScoreWeight(
                 self.bloodfury_uptime / gargoyle_duration if self._bloodfury_uptime else 0,
-                2 if self._bloodfury_uptime else 0,
+                2 * buff_multiplier if self._bloodfury_uptime else 0,
             ),
-            # Berserking uptime score
+            # Berserking uptime score (doubled during bloodlust)
             ScoreWeight(
                 self.berserking_uptime / gargoyle_duration if self._berserking_uptime else 0,
-                2 if self._berserking_uptime else 0,
+                2 * buff_multiplier if self._berserking_uptime else 0,
             ),
-            # Bloodlust uptime score
+            # Bloodlust uptime score (base weight, not doubled)
             ScoreWeight(
                 self.bloodlust_uptime / gargoyle_duration if self._bloodlust_uptime else 0,
                 3 if self._bloodlust_uptime else 0,
@@ -802,7 +814,7 @@ class DeathAndDecayUptimeAnalyzer(BaseAnalyzer):
 
     @property
     def max_uptime(self):
-        return 13 / 40
+        return 0.27  # Changed to 27% threshold
 
     def uptime(self):
         return self._dnd_ticks / (self._fight_duration // 1000)
@@ -1218,7 +1230,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
 
         return {
             GargoyleAnalyzer: {
-                "weight": lambda ga: 3 * ga.possible_gargoyles,
+                "weight": 7,  # Changed from 3 * possible_gargoyles to fixed weight
                 "exponent_factor": exponent_factor,
             },
             BloodPlagueAnalyzer: {
@@ -1230,7 +1242,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "exponent_factor": exponent_factor,
             },
             DarkTransformationUptimeAnalyzer: {
-                "weight": 10,
+                "weight": 7,  # Reduced from 10 to 7
                 "exponent_factor": exponent_factor,
             },
             DarkTransformationAnalyzer: {
@@ -1238,7 +1250,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "exponent_factor": exponent_factor,
             },
             DeathAndDecayUptimeAnalyzer: {
-                "weight": 4,
+                "weight": 2,  # Reduced from 4 to 2
                 "exponent_factor": exponent_factor,
             },
             MeleeUptimeAnalyzer: {
@@ -1266,7 +1278,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "weight": lambda ta: ta.num_on_use_trinkets * 2,
             },
             FesteringStrikeTracker: {
-                "weight": 2,
+                "weight": 1,
                 "exponent_factor": exponent_factor,
             },
             SoulReaperAnalyzer: {
@@ -1313,7 +1325,7 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             UnholyPresenceUptimeAnalyzer(fight.duration, buff_tracker, dead_zones),
             ArmyAnalyzer(fight.duration, buff_tracker, dead_zones, items),
             FesteringStrikeTracker(),
-            SoulReaperAnalyzer(fight.duration, fight.end_time),
+            SoulReaperAnalyzer(fight.duration, fight.start_time + fight.duration),
             OutbreakSnapshotTracker(buff_tracker, combatant_info),
             PlagueLeechAnalyzer(fight.duration, combatant_info),
             # AMSAnalyzer(fight.end_time)
