@@ -263,12 +263,12 @@ class DeadZoneAnalyzer(BasePreprocessor):
 
 
 class Rune:
-    def __init__(self, full_name, type):
+    def __init__(self, full_name, type, is_death=False):
         self.full_name = full_name
         self.type = type
         self.regen_time = 0
         # Flag for death rune (when converted normally)
-        self.is_death = False
+        self.is_death = is_death
         # Blood Tap is tracked as separate attribute since a blood-tapped
         # death rune doesn't convert back to blood when used
         # like a normal death rune does
@@ -436,15 +436,26 @@ class RuneHasteTracker(BaseAnalyzer):
 
 
 class RuneTracker(BaseAnalyzer):
-    def __init__(self, should_convert_blood, should_convert_frost):
-        self.runes = [
-            Rune("Blood1", "Blood"),
-            Rune("Blood2", "Blood"),
-            Rune("Frost1", "Frost"),
-            Rune("Frost2", "Frost"),
-            Rune("Unholy1", "Unholy"),
-            Rune("Unholy2", "Unholy"),
-        ]
+    def __init__(self, should_convert_blood, should_convert_frost, start_with_death_runes=False):
+        if start_with_death_runes:
+            # MoP Frost DK: starts with 2 death runes instead of 2 blood runes
+            self.runes = [
+                Rune("Death1", "Death", is_death=True),
+                Rune("Death2", "Death", is_death=True),
+                Rune("Frost1", "Frost"),
+                Rune("Frost2", "Frost"),
+                Rune("Unholy1", "Unholy"),
+                Rune("Unholy2", "Unholy"),
+            ]
+        else:
+            self.runes = [
+                Rune("Blood1", "Blood"),
+                Rune("Blood2", "Blood"),
+                Rune("Frost1", "Frost"),
+                Rune("Frost2", "Frost"),
+                Rune("Unholy1", "Unholy"),
+                Rune("Unholy2", "Unholy"),
+            ]
         for i in range(0, 6, 2):
             first, second = self.runes[i], self.runes[i + 1]
             first.set_linked_rune(second)
@@ -580,21 +591,26 @@ class RuneTracker(BaseAnalyzer):
                 self.runes[i].refresh(timestamp)
 
     def current_runes(self, timestamp):
-        def _count_rune(i):
-            return (
+        def _count_rune_by_type(rune_type):
+            return sum(
                 1
-                if self.runes[i].can_spend(timestamp)
-                and not (self.runes[i].is_death or self.runes[i].blood_tapped)
-                else 0
+                for rune in self.runes
+                if rune.type == rune_type
+                and rune.can_spend(timestamp)
+                and not (rune.is_death or rune.blood_tapped)
             )
 
+        # Count death runes (including those that started as death runes)
+        death_count = sum(
+            1 for rune in self.runes
+            if (rune.is_death or rune.blood_tapped) and rune.can_spend(timestamp)
+        )
+
         return {
-            "Blood": sum(_count_rune(i) for i in range(0, 2)),
-            "Frost": sum(_count_rune(i) for i in range(2, 4)),
-            "Unholy": sum(_count_rune(i) for i in range(4, 6)),
-            "Death": sum(
-                1 for rune in self.current_death_runes if rune.can_spend(timestamp)
-            ),
+            "Blood": _count_rune_by_type("Blood"),
+            "Frost": _count_rune_by_type("Frost"),
+            "Unholy": _count_rune_by_type("Unholy"),
+            "Death": death_count,
         }
 
     def add_event(self, event):
