@@ -1011,7 +1011,6 @@ class GhoulAnalyzer(BaseAnalyzer):
 # ArmyAnalyzer moved to core_analysis.py for shared use between Frost and Unholy
 
 
-
 class UnholyPresenceUptimeAnalyzer(BaseAnalyzer):
     def __init__(
         self,
@@ -1225,8 +1224,45 @@ class AMSAnalyzer(BaseAnalyzer):
 
 
 class UnholyAnalysisScorer(AnalysisScorer):
+    def __init__(self, analyzers, encounter_name=None):
+        super().__init__(analyzers)
+        self.encounter_name = encounter_name
+
+    def get_encounter_adjustments(self):
+        """Get encounter-specific scoring adjustments"""
+        adjustments = {
+            "Blade Lord Ta'yak": {
+                # Tornado phase makes buff coordination harder
+                "soul_reaper_weight_multiplier": 0.7,
+                "buff_coordination_tolerance": 0.8,
+                "gcd_delay_tolerance": 1.2,
+            },
+            "Grand Empress Shek'zeer": {
+                # Mind control phases disrupt rotations
+                "soul_reaper_weight_multiplier": 0.8,
+                "buff_coordination_tolerance": 0.85,
+            },
+            "Lei Shi": {
+                # Hide phases and high movement
+                "soul_reaper_weight_multiplier": 0.6,
+                "buff_coordination_tolerance": 0.7,
+                "gcd_delay_tolerance": 1.3,
+            },
+            "Tsulong": {
+                # Day/night phase transitions
+                "buff_coordination_tolerance": 0.9,
+            },
+        }
+        return adjustments.get(self.encounter_name, {})
+
     def get_score_weights(self):
         exponent_factor = 1.5
+        adjustments = self.get_encounter_adjustments()
+
+        # Apply Soul Reaper weight adjustment if specified
+        soul_reaper_weight = 5
+        if "soul_reaper_weight_multiplier" in adjustments:
+            soul_reaper_weight *= adjustments["soul_reaper_weight_multiplier"]
 
         return {
             GargoyleAnalyzer: {
@@ -1254,7 +1290,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "exponent_factor": exponent_factor,
             },
             MeleeUptimeAnalyzer: {
-                "weight": 6,
+                "weight": 2,
                 "exponent_factor": exponent_factor,
             },
             RPAnalyzer: {
@@ -1282,7 +1318,7 @@ class UnholyAnalysisScorer(AnalysisScorer):
                 "exponent_factor": exponent_factor,
             },
             SoulReaperAnalyzer: {
-                "weight": 5,
+                "weight": soul_reaper_weight,
                 "exponent_factor": exponent_factor,
             },
             OutbreakSnapshotTracker: {
@@ -1325,14 +1361,15 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             UnholyPresenceUptimeAnalyzer(fight.duration, buff_tracker, dead_zones),
             ArmyAnalyzer(fight.duration, buff_tracker, dead_zones, items),
             FesteringStrikeTracker(),
-            SoulReaperAnalyzer(fight.duration, fight.start_time + fight.duration),
+            SoulReaperAnalyzer(fight.duration, fight.start_time + fight.duration, dead_zones),
             OutbreakSnapshotTracker(buff_tracker, combatant_info),
             PlagueLeechAnalyzer(fight.duration, combatant_info),
             # AMSAnalyzer(fight.end_time)
         ]
 
-    def get_scorer(self, analyzers):
-        return UnholyAnalysisScorer(analyzers)
+    def get_scorer(self, analyzers, fight=None):
+        encounter_name = fight.encounter.name if fight else None
+        return UnholyAnalysisScorer(analyzers, encounter_name)
 
     def create_rune_tracker(self) -> RuneTracker:
         return RuneTracker(

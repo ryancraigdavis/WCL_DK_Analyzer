@@ -230,6 +230,9 @@ const Summary = () => {
 
     if (infoOnly) {
       color = "hl"
+    } else if (gcdLatency.color) {
+      // Use color from backend if provided
+      color = gcdLatency.color;
     } else if (averageLatency > 300) {
       color = "red";
     } else if (averageLatency > 200) {

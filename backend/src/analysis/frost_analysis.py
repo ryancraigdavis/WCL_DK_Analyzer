@@ -783,7 +783,7 @@ class FrostAnalysisScorer(AnalysisScorer):
             ObliterateAnalyzer: {
                 "weight": 2,  # Reduced weight since it's now pass/fail rather than CPM optimization
             },
-            GCDAnalyzer: {
+            RuneTracker: {
                 "weight": 3,
             },
             KMAnalyzer: {
@@ -811,7 +811,7 @@ class FrostAnalysisScorer(AnalysisScorer):
                 "exponent_factor": 1.5,
             },
             MeleeUptimeAnalyzer: {
-                "weight": 4,
+                "weight": 2,
                 "exponent_factor": 1.5,
             },
             BuffTracker: {
@@ -880,7 +880,7 @@ class FrostAnalysisConfig(CoreAnalysisConfig):
             PlagueLeechAnalyzer(fight.duration, combatant_info),
         ]
 
-    def get_scorer(self, analyzers):
+    def get_scorer(self, analyzers, fight=None):
         return FrostAnalysisScorer(analyzers)
 
     def create_rune_tracker(self):
