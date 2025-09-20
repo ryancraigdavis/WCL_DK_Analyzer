@@ -1359,31 +1359,52 @@ class SoulReaperAnalyzer(BaseAnalyzer):
     def __init__(self, fight_duration, fight_end_time):
         self._fight_duration = fight_duration
         self._fight_end_time = fight_end_time
-        self._soul_reaper_casts = []
+        self._soul_reaper_hits = []
         self._execute_phase_start = None
         self._boss_current_hp = None
         self._boss_max_hp = None
+        self._boss_target_id = None  # Track which target is the boss
 
     def add_event(self, event):
-        # Track boss HP to detect 35% threshold
-        if event["type"] == "damage" and event.get("target_is_boss"):
-            if event.get("hitPoints") and event.get("maxHitPoints"):
-                self._boss_current_hp = event["hitPoints"]
+        # Track boss HP to detect 35% threshold - identify boss by highest max HP
+        if (event["type"] == "damage" and
+            event.get("hitPoints") and event.get("maxHitPoints")):
+
+            # Identify boss as target with highest max HP
+            if (self._boss_max_hp is None or
+                event["maxHitPoints"] > self._boss_max_hp):
+                self._boss_target_id = event["targetID"]
                 self._boss_max_hp = event["maxHitPoints"]
+
+            # Only track HP changes for the boss target
+            if event["targetID"] == self._boss_target_id:
+                self._boss_current_hp = event["hitPoints"]
 
                 # Check if boss just hit 35%
                 hp_percentage = (self._boss_current_hp / self._boss_max_hp) * 100
                 if hp_percentage <= 35 and self._execute_phase_start is None:
                     self._execute_phase_start = event["timestamp"]
 
-        # Track Soul Reaper casts (ability IDs: 130735 Frost, 130736 Unholy, 114867)
-        if (event["type"] == "cast" and
-            event.get("abilityGameID") in (130735, 130736, 114867)):
-            self._soul_reaper_casts.append({
+        # Track Soul Reaper hits/damage - only on boss target
+        if (event["type"] == "damage" and
+            event.get("abilityGameID") == 114867 and
+            event["targetID"] == self._boss_target_id):
+
+            # Check if this hit occurred within 3 seconds AFTER execute phase starts
+            time_after_execute = None
+            hit_in_execute_window = False
+
+            if self._execute_phase_start is not None:
+                time_after_execute = event["timestamp"] - self._execute_phase_start
+                # Count all hits AFTER execute phase starts (entire execute window)
+                hit_in_execute_window = (time_after_execute > 0)
+
+            self._soul_reaper_hits.append({
                 "timestamp": event["timestamp"],
                 "target": event.get("targetID"),
-                "in_execute_phase": self._execute_phase_start is not None and
-                                   event["timestamp"] >= self._execute_phase_start
+                "damage": event.get("amount", 0),
+                "time_after_execute": time_after_execute,
+                "hit_in_execute_window": hit_in_execute_window
             })
 
     @property
@@ -1393,43 +1414,63 @@ class SoulReaperAnalyzer(BaseAnalyzer):
         return self._fight_end_time - self._execute_phase_start
 
     @property
-    def soul_reaper_casts_in_execute(self):
-        return [cast for cast in self._soul_reaper_casts if cast["in_execute_phase"]]
+    def soul_reaper_hits_in_execute_window(self):
+        return [hit for hit in self._soul_reaper_hits if hit["hit_in_execute_window"]]
+
+    @property
+    def total_soul_reaper_hits(self):
+        return len(self._soul_reaper_hits)
 
     @property
     def max_possible_soul_reapers(self):
         if self.execute_phase_duration <= 0:
             return 0
-        # 6 second cooldown, account for first cast delay
+        # 6 second cooldown, account for setup time - estimate max hits possible
         return max(0, int((self.execute_phase_duration - 2000) / 6000) + 1)
 
     @property
-    def first_soul_reaper_delay(self):
-        execute_casts = self.soul_reaper_casts_in_execute
-        if not execute_casts or self._execute_phase_start is None:
+    def first_soul_reaper_hit_delay(self):
+        execute_hits = self.soul_reaper_hits_in_execute_window
+        if not execute_hits or self._execute_phase_start is None:
             return None
-        return execute_casts[0]["timestamp"] - self._execute_phase_start
+        # Sort by timestamp to find the chronologically first hit
+        first_hit = min(execute_hits, key=lambda hit: hit["timestamp"])
+        return first_hit["time_after_execute"]
 
     def score(self):
         if self._execute_phase_start is None:
             return 0  # No execute phase detected
 
-        execute_casts = len(self.soul_reaper_casts_in_execute)
+        execute_hits = len(self.soul_reaper_hits_in_execute_window)
         max_possible = self.max_possible_soul_reapers
 
         if max_possible == 0:
-            return 1 if execute_casts == 0 else 0
+            return 1 if execute_hits == 0 else 0
 
-        # Score based on 90% efficiency threshold
-        efficiency = execute_casts / max_possible
-        threshold = 0.9
+        # Sliding scale scoring based on number of possible Soul Reapers
+        if max_possible < 5:
+            # Under 5 possible: allow dropping only 1 for full credit
+            min_for_perfect = max(0, max_possible - 1)
+        elif max_possible <= 10:
+            # 5-10 possible: allow dropping only 2 for full credit
+            min_for_perfect = max(0, max_possible - 2)
+        else:
+            # Over 10 possible: 80% threshold for full credit
+            min_for_perfect = max_possible * 0.8
 
-        # Bonus points for quick first cast (within 2 seconds)
-        first_cast_bonus = 0
-        if self.first_soul_reaper_delay is not None and self.first_soul_reaper_delay <= 2000:
-            first_cast_bonus = 0.1
+        # Calculate base score
+        if execute_hits >= min_for_perfect:
+            hit_score = 1.0
+        else:
+            # Linear scale from 0 to 1.0 based on hits vs minimum required
+            hit_score = execute_hits / max(1, min_for_perfect)
 
-        return min(1.0, efficiency / threshold + first_cast_bonus)
+        # Bonus points for quick first hit (within 3 seconds of execute phase)
+        first_hit_bonus = 0
+        if self.first_soul_reaper_hit_delay is not None and self.first_soul_reaper_hit_delay <= 3000:
+            first_hit_bonus = 0.1
+
+        return min(1.0, hit_score + first_hit_bonus)
 
     def report(self):
         return {
@@ -1437,13 +1478,13 @@ class SoulReaperAnalyzer(BaseAnalyzer):
                 "execute_phase_detected": self._execute_phase_start is not None,
                 "execute_phase_start": self._execute_phase_start,
                 "execute_phase_duration": self.execute_phase_duration / 1000 if self.execute_phase_duration > 0 else 0,
-                "total_casts": len(self._soul_reaper_casts),
-                "execute_phase_casts": len(self.soul_reaper_casts_in_execute),
-                "max_possible_casts": self.max_possible_soul_reapers,
-                "first_cast_delay": self.first_soul_reaper_delay / 1000 if self.first_soul_reaper_delay is not None else None,
-                "efficiency": len(self.soul_reaper_casts_in_execute) / max(1, self.max_possible_soul_reapers),
+                "total_hits": len(self._soul_reaper_hits),
+                "execute_window_hits": len(self.soul_reaper_hits_in_execute_window),
+                "max_possible_hits": self.max_possible_soul_reapers,
+                "first_hit_delay": self.first_soul_reaper_hit_delay / 1000 if self.first_soul_reaper_hit_delay is not None else None,
+                "hit_efficiency": len(self.soul_reaper_hits_in_execute_window) / max(1, self.max_possible_soul_reapers),
                 "score": self.score(),
-                "casts": self._soul_reaper_casts
+                "hits": self._soul_reaper_hits
             }
         }
 
@@ -2244,7 +2285,7 @@ class CoreAnalysisConfig:
             MeleeUptimeAnalyzer(fight.duration, dead_zone_analyzer.get_dead_zones()),
             TrinketAnalyzer(fight.duration, items),
             BloodChargeCapAnalyzer(combatant_info),
-            SoulReaperAnalyzer(fight.duration, fight.end_time),
+            SoulReaperAnalyzer(fight.duration, fight.start_time + fight.duration),
             EmpoweredRuneWeaponAnalyzer(),
         ]
 
