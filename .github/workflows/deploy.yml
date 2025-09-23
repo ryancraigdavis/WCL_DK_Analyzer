@@ -16,10 +16,13 @@ jobs:
     - name: Install Doppler CLI
       uses: dopplerhq/cli-action@v3
 
-    - name: Setup Python 3.12
+    - name: Setup Python 3.12 and UV
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
+
+    - name: Install UV
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -48,10 +51,13 @@ jobs:
       run: |
         cd backend
 
-        # Setup Python virtual environment
-        python -m venv .venv
+        # Add UV to PATH
+        export PATH="$HOME/.cargo/bin:$PATH"
+
+        # Setup UV virtual environment and install dependencies
+        uv venv .venv
         source .venv/bin/activate
-        pip install -r requirements.txt
+        uv sync --dev
 
         # Export environment variables from Doppler
         export WCL_FUNCTION_NAME=$(doppler secrets get WCL_FUNCTION_NAME --plain)

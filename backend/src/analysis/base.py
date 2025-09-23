@@ -1,4 +1,4 @@
-from typing import Type, TypeVar
+from typing import TypeVar
 
 R = TypeVar("R")
 
@@ -51,7 +51,7 @@ class AnalysisScorer(BaseAnalyzer):
     def __init__(self, analyzers):
         self._analyzers = {analyzer.__class__: analyzer for analyzer in analyzers}
 
-    def get_analyzer(self, cls: Type[R]) -> R:
+    def get_analyzer(self, cls: type[R]) -> R:
         return self._analyzers[cls]
 
     def get_score_weights(self):

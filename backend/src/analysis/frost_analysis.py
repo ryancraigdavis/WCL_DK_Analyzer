@@ -1,23 +1,16 @@
-from typing import List
-
-from analysis.base import AnalysisScorer, BaseAnalyzer, Window, ScoreWeight
+from analysis.base import AnalysisScorer, BaseAnalyzer, ScoreWeight, Window
 from analysis.core_analysis import (
+    ArmyAnalyzer,
+    BloodChargeCapAnalyzer,
     BuffTracker,
+    BuffUptimeAnalyzer,
+    CoreAbilities,
     CoreAnalysisConfig,
     DiseaseAnalyzer,
-    GCDAnalyzer,
-    SynapseSpringsAnalyzer,
     MeleeUptimeAnalyzer,
-    RuneTracker,
-    TrinketAnalyzer,
-    RPAnalyzer,
-    CoreAbilities,
-    BloodChargeCapAnalyzer,
-    SoulReaperAnalyzer,
-    EmpoweredRuneWeaponAnalyzer,
-    BuffUptimeAnalyzer,
-    ArmyAnalyzer,
     PlagueLeechAnalyzer,
+    RuneTracker,
+    SynapseSpringsAnalyzer,
 )
 from analysis.unholy_analysis import BloodPlagueAnalyzer, FrostFeverAnalyzer
 from console_table import console
@@ -53,10 +46,12 @@ class KMAnalyzer(BaseAnalyzer):
             return
 
         # Track abilities that consume KM procs
-        if (event["type"] == "cast" and
-            event["ability"] in ("Obliterate", "Frost Strike") and
-            event.get("consumes_km") and
-            self._window):
+        if (
+            event["type"] == "cast"
+            and event["ability"] in ("Obliterate", "Frost Strike")
+            and event.get("consumes_km")
+            and self._window
+        ):
 
             # Record what ability consumed the KM proc
             self._window.consuming_ability = event["ability"]
@@ -116,10 +111,19 @@ class KMAnalyzer(BaseAnalyzer):
         ]
         avg_latency = sum(latencies) / len(latencies) if latencies else 0
         total_time_to_use = sum(latencies)  # Total time across all KM procs
-        return num_used, num_windows, avg_latency, total_time_to_use, self._km_on_frost_strike, self._km_on_obliterate
+        return (
+            num_used,
+            num_windows,
+            avg_latency,
+            total_time_to_use,
+            self._km_on_frost_strike,
+            self._km_on_obliterate,
+        )
 
     def score(self):
-        num_used, num_windows, avg_latency, _, km_on_fs, km_on_obliterate = self.get_data()
+        num_used, num_windows, avg_latency, _, km_on_fs, km_on_obliterate = (
+            self.get_data()
+        )
         if avg_latency < 1800:
             return 1
         if avg_latency < 1900:
@@ -139,7 +143,14 @@ class KMAnalyzer(BaseAnalyzer):
         return 0
 
     def report(self):
-        num_used, num_windows, avg_latency, total_time_to_use, km_on_fs, km_on_obliterate = self.get_data()
+        (
+            num_used,
+            num_windows,
+            avg_latency,
+            total_time_to_use,
+            km_on_fs,
+            km_on_obliterate,
+        ) = self.get_data()
 
         # Get detailed window information for analysis
         used_windows = [window for window in self._windows if window.used_timestamp]
@@ -147,12 +158,14 @@ class KMAnalyzer(BaseAnalyzer):
 
         for window in used_windows:
             delay = window.used_timestamp - window.gained_timestamp
-            window_details.append({
-                "gained_at": window.gained_timestamp,
-                "used_at": window.used_timestamp,
-                "delay_ms": delay,
-                "consuming_ability": window.consuming_ability,
-            })
+            window_details.append(
+                {
+                    "gained_at": window.gained_timestamp,
+                    "used_at": window.used_timestamp,
+                    "delay_ms": delay,
+                    "consuming_ability": window.consuming_ability,
+                }
+            )
 
         # Calculate Frost Strike percentage for scoring
         total_km_used = km_on_fs + km_on_obliterate
@@ -164,8 +177,10 @@ class KMAnalyzer(BaseAnalyzer):
                 "num_total": num_windows,
                 "avg_latency": avg_latency,
                 "total_time_to_use": total_time_to_use,  # Total time across whole fight
-                "avg_time_seconds": avg_latency / 1000,  # Average time in seconds for UI
-                "total_time_seconds": total_time_to_use / 1000,  # Total time in seconds for UI
+                "avg_time_seconds": avg_latency
+                / 1000,  # Average time in seconds for UI
+                "total_time_seconds": total_time_to_use
+                / 1000,  # Total time in seconds for UI
                 "windows": window_details,
                 "usage_events": self._km_usage_events,  # For timeline integration
                 "km_on_frost_strike": km_on_fs,
@@ -173,8 +188,6 @@ class KMAnalyzer(BaseAnalyzer):
                 "frost_strike_percentage": fs_percentage,
             },
         }
-
-
 
 
 class HowlingBlastAnalyzer(BaseAnalyzer):
@@ -353,10 +366,12 @@ class RaiseDeadWindow(Window):
                 max_duration=trinket.proc_duration - 25,
             )
             self._uptimes.append(uptime)
-            self.trinket_uptimes.append({
-                "trinket": trinket,
-                "uptime": uptime,
-            })
+            self.trinket_uptimes.append(
+                {
+                    "trinket": trinket,
+                    "uptime": uptime,
+                }
+            )
 
     def _set_ghoul_first_attack(self, event):
         self._ghoul_first_attack = event["timestamp"]
@@ -434,11 +449,15 @@ class RaiseDeadWindow(Window):
             ScoreWeight(self.potion_uptime / ghoul_duration, 3),
             ScoreWeight(self.pillar_of_frost_uptime / ghoul_duration, 4),
             # Performance score based on attacks
-            ScoreWeight(min(1, self.num_attacks / 30), 3), # Expect ~30 attacks in 60s
+            ScoreWeight(min(1, self.num_attacks / 30), 3),  # Expect ~30 attacks in 60s
             # Trinket uptime score
             ScoreWeight(
-                sum(t["uptime"] for t in self.trinket_snapshots) /
-                (ghoul_duration * len(self.trinket_snapshots)) if self.trinket_snapshots else 0,
+                (
+                    sum(t["uptime"] for t in self.trinket_snapshots)
+                    / (ghoul_duration * len(self.trinket_snapshots))
+                    if self.trinket_snapshots
+                    else 0
+                ),
                 len(self.trinket_snapshots) * 2,
             ),
             # Blood Fury uptime score
@@ -448,7 +467,11 @@ class RaiseDeadWindow(Window):
             ),
             # Berserking uptime score
             ScoreWeight(
-                self.berserking_uptime / ghoul_duration if self._berserking_uptime else 0,
+                (
+                    self.berserking_uptime / ghoul_duration
+                    if self._berserking_uptime
+                    else 0
+                ),
                 2 if self._berserking_uptime else 0,
             ),
             # Bloodlust uptime score
@@ -463,7 +486,7 @@ class RaiseDeadAnalyzer(BaseAnalyzer):
     INCLUDE_PET_EVENTS = True
 
     def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
-        self.windows: List[RaiseDeadWindow] = []
+        self.windows: list[RaiseDeadWindow] = []
         self._window = None
         self._buff_tracker = buff_tracker
         self._fight_duration = fight_duration
@@ -473,7 +496,10 @@ class RaiseDeadAnalyzer(BaseAnalyzer):
 
     def add_event(self, event):
         # Check for Raise Dead by ability ID - 46585 is the Frost DK version
-        if event["type"] in ("cast", "summon") and event.get("abilityGameID") in (46585, 52150):
+        if event["type"] in ("cast", "summon") and event.get("abilityGameID") in (
+            46585,
+            52150,
+        ):
             self._window = RaiseDeadWindow(
                 event["timestamp"],
                 self._fight_duration,
@@ -577,21 +603,51 @@ class ObliterateAnalyzer(BaseAnalyzer):
             runes_before = event.get("runes_before", [])
             runes_after = event.get("runes", [])
             if runes_before and runes_after:
-                # Count available runes before the cast
-                unholy_available = sum(1 for rune in runes_before if rune["name"] == "Unholy" and rune["is_available"])
-                frost_available = sum(1 for rune in runes_before if rune["name"] == "Frost" and rune["is_available"])
-                death_available = sum(1 for rune in runes_before if rune["name"] == "Death" and rune["is_available"])
+                # Count available runes before the cast - currently unused
+                # unholy_available = sum(
+                #     1
+                #     for rune in runes_before
+                #     if rune["name"] == "Unholy" and rune["is_available"]
+                # )
+                # frost_available = sum(
+                #     1
+                #     for rune in runes_before
+                #     if rune["name"] == "Frost" and rune["is_available"]
+                # )
+                # death_available = sum(
+                #     1
+                #     for rune in runes_before
+                #     if rune["name"] == "Death" and rune["is_available"]
+                # )
 
                 # Count what runes were actually consumed (became unavailable)
-                unholy_consumed = sum(1 for i, rune in enumerate(runes_before)
-                                    if (rune["name"] == "Unholy" and rune["is_available"] and
-                                        not runes_after[i]["is_available"]))
-                frost_consumed = sum(1 for i, rune in enumerate(runes_before)
-                                   if (rune["name"] == "Frost" and rune["is_available"] and
-                                       not runes_after[i]["is_available"]))
-                death_consumed = sum(1 for i, rune in enumerate(runes_before)
-                                   if (rune["name"] == "Death" and rune["is_available"] and
-                                       not runes_after[i]["is_available"]))
+                unholy_consumed = sum(
+                    1
+                    for i, rune in enumerate(runes_before)
+                    if (
+                        rune["name"] == "Unholy"
+                        and rune["is_available"]
+                        and not runes_after[i]["is_available"]
+                    )
+                )
+                frost_consumed = sum(
+                    1
+                    for i, rune in enumerate(runes_before)
+                    if (
+                        rune["name"] == "Frost"
+                        and rune["is_available"]
+                        and not runes_after[i]["is_available"]
+                    )
+                )
+                death_consumed = sum(
+                    1
+                    for i, rune in enumerate(runes_before)
+                    if (
+                        rune["name"] == "Death"
+                        and rune["is_available"]
+                        and not runes_after[i]["is_available"]
+                    )
+                )
 
                 # Obliterate costs 1 Unholy + 1 Frost, but Death runes can substitute for either
                 total_consumed = unholy_consumed + frost_consumed + death_consumed
@@ -611,9 +667,13 @@ class ObliterateAnalyzer(BaseAnalyzer):
                     if unholy_consumed == 0:
                         is_bad_usage = True
                         if death_consumed == 2:
-                            message_parts.append(f"Used 2 Death runes instead of Death+Unholy or Frost+Unholy")
+                            message_parts.append(
+                                "Used 2 Death runes instead of Death+Unholy or Frost+Unholy"
+                            )
                         elif death_consumed > 0 and frost_consumed > 0:
-                            message_parts.append(f"Used Death+Frost instead of Death+Unholy or Frost+Unholy")
+                            message_parts.append(
+                                "Used Death+Frost instead of Death+Unholy or Frost+Unholy"
+                            )
 
                     if is_bad_usage:
                         self._obliterates_with_death_runes += 1
@@ -648,10 +708,15 @@ class ObliterateAnalyzer(BaseAnalyzer):
 
     def score(self):
         # For Masterfrost: 0 obliterates during Rime and 0 death rune usage = perfect score
-        if self._obliterates_during_rime == 0 and self._obliterates_with_death_runes == 0:
+        if (
+            self._obliterates_during_rime == 0
+            and self._obliterates_with_death_runes == 0
+        ):
             return 1
         # Partial penalty for each type of bad usage
-        total_bad_usages = self._obliterates_during_rime + self._obliterates_with_death_runes
+        total_bad_usages = (
+            self._obliterates_during_rime + self._obliterates_with_death_runes
+        )
         if total_bad_usages == 1:
             return 0.5
         return 0
@@ -666,7 +731,7 @@ class ObliterateAnalyzer(BaseAnalyzer):
                 "bad_usages": self._obliterates_with_death_runes,
                 "total_obliterates": self._total_obliterates,
                 "death_rune_events": self._death_rune_events,
-            }
+            },
         }
 
 
@@ -686,7 +751,11 @@ class PillarOfFrostAnalyzer(BaseAnalyzer):
         return 1 + (self._fight_duration // 60000)
 
     def score(self):
-        usage_percentage = len(self._pillar_casts) / self.possible_pillars if self.possible_pillars > 0 else 0
+        usage_percentage = (
+            len(self._pillar_casts) / self.possible_pillars
+            if self.possible_pillars > 0
+            else 0
+        )
 
         if usage_percentage >= 1.0:
             return 1
@@ -700,7 +769,11 @@ class PillarOfFrostAnalyzer(BaseAnalyzer):
             "pillar_of_frost_usage": {
                 "num_used": len(self._pillar_casts),
                 "possible_usages": self.possible_pillars,
-                "usage_percentage": len(self._pillar_casts) / self.possible_pillars if self.possible_pillars > 0 else 0,
+                "usage_percentage": (
+                    len(self._pillar_casts) / self.possible_pillars
+                    if self.possible_pillars > 0
+                    else 0
+                ),
             }
         }
 
@@ -724,16 +797,36 @@ class PlagueStrikeAnalyzer(BaseAnalyzer):
             runes_after = event.get("runes", [])
             if runes_before and runes_after:
                 # Count available runes before the cast
-                unholy_available = sum(1 for rune in runes_before if rune["name"] == "Unholy" and rune["is_available"])
-                death_available = sum(1 for rune in runes_before if rune["name"] == "Death" and rune["is_available"])
+                unholy_available = sum(
+                    1
+                    for rune in runes_before
+                    if rune["name"] == "Unholy" and rune["is_available"]
+                )
+                # death_available = sum(
+                #     1
+                #     for rune in runes_before
+                #     if rune["name"] == "Death" and rune["is_available"]
+                # )
 
-                # Count what runes were actually consumed (became unavailable)
-                unholy_consumed = sum(1 for i, rune in enumerate(runes_before)
-                                    if (rune["name"] == "Unholy" and rune["is_available"] and
-                                        not runes_after[i]["is_available"]))
-                death_consumed = sum(1 for i, rune in enumerate(runes_before)
-                                   if (rune["name"] == "Death" and rune["is_available"] and
-                                       not runes_after[i]["is_available"]))
+                # Count what runes were actually consumed (became unavailable) - currently unused
+                # unholy_consumed = sum(
+                #     1
+                #     for i, rune in enumerate(runes_before)
+                #     if (
+                #         rune["name"] == "Unholy"
+                #         and rune["is_available"]
+                #         and not runes_after[i]["is_available"]
+                #     )
+                # )
+                death_consumed = sum(
+                    1
+                    for i, rune in enumerate(runes_before)
+                    if (
+                        rune["name"] == "Death"
+                        and rune["is_available"]
+                        and not runes_after[i]["is_available"]
+                    )
+                )
 
                 # Plague Strike costs 1 Unholy rune - check if Death rune was used instead
                 if death_consumed > 0 and unholy_available > 0:

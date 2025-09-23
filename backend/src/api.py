@@ -1,8 +1,7 @@
+import json
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Dict
-import json
 from pathlib import Path
 
 import sentry_sdk
@@ -11,8 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
-from client import fetch_report, PrivateReport, TemporaryUnavailable
 from analysis.analyze import analyze
+from client import PrivateReport, TemporaryUnavailable, fetch_report
 
 SENTRY_ENABLED = os.environ.get("AWS_EXECUTION_ENV") is not None
 if SENTRY_ENABLED:
@@ -47,7 +46,7 @@ app.add_middleware(
 
 
 class AnalyzeResponse(BaseModel):
-    data: Dict
+    data: dict
 
 
 async def save_combat_log(report, report_id: str, fight_id: int, source_id: int):
@@ -56,16 +55,16 @@ async def save_combat_log(report, report_id: str, fight_id: int, source_id: int)
         # Create logs directory if it doesn't exist (in the backend root)
         logs_dir = Path("../saved_logs")
         logs_dir.mkdir(exist_ok=True)
-        
+
         # Create filename with timestamp and metadata
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{timestamp}_{report_id}_{fight_id}_{source_id}.json"
         filepath = logs_dir / filename
-        
+
         # Debug: log the working directory and file path
         logging.info(f"Current working directory: {os.getcwd()}")
         logging.info(f"Attempting to save to: {filepath.absolute()}")
-        
+
         # Prepare data to save
         log_data = {
             "metadata": {
@@ -74,22 +73,22 @@ async def save_combat_log(report, report_id: str, fight_id: int, source_id: int)
                 "source_id": source_id,
                 "source_name": report.source.name,
                 "timestamp": timestamp,
-                "end_time": report.end_time
+                "end_time": report.end_time,
             },
             "events": report._events,
             "combatant_info": report._combatant_info,
             "fights": report._fights,
             "abilities": report._abilities,
             "actors": report._actors,
-            "rankings": report._rankings
+            "rankings": report._rankings,
         }
-        
+
         # Save to file
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(log_data, f, indent=2)
-            
+
         logging.info(f"Saved combat log to {filepath}")
-        
+
     except Exception as e:
         logging.error(f"Failed to save combat log: {e}")
         # Don't let this break the main analysis flow
@@ -105,10 +104,10 @@ async def analyze_fight(
 
     try:
         report = await fetch_report(report_id, fight_id, source_id)
-        
+
         # Save the combat log for analysis
         await save_combat_log(report, report_id, fight_id, source_id)
-        
+
     except PrivateReport:
         response.status_code = 403
         return {"error": "Can not analyze private reports"}

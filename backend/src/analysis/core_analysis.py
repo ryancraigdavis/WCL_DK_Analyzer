@@ -1,18 +1,17 @@
 import functools
 import itertools
 from collections import defaultdict
-from typing import Optional, List
 
 from analysis.base import (
     AnalysisScorer,
     BaseAnalyzer,
     BasePreprocessor,
-    Window,
     ScoreWeight,
+    Window,
     calculate_uptime,
     range_overlap,
 )
-from analysis.items import Trinket, ItemPreprocessor
+from analysis.items import ItemPreprocessor, Trinket
 from report import Fight
 
 
@@ -248,41 +247,49 @@ class DeadZoneAnalyzer(BasePreprocessor):
         then must run across the room. Dead zone ends when player hits boss again.
         """
         # Initialize boss targetID detection on first relevant event
-        if not hasattr(self, '_boss_target_id'):
+        if not hasattr(self, "_boss_target_id"):
             self._boss_target_id = None
             self._max_hp_seen = 0
 
         # Identify boss by highest maxHitPoints (typically 500M+ HP)
-        if (event["type"] == "damage" and
-            event.get("maxHitPoints") and
-            event["maxHitPoints"] > self._max_hp_seen):
+        if (
+            event["type"] == "damage"
+            and event.get("maxHitPoints")
+            and event["maxHitPoints"] > self._max_hp_seen
+        ):
             self._max_hp_seen = event["maxHitPoints"]
             self._boss_target_id = event.get("targetID")
 
         # Track boss HP to detect 20% transition
-        if (event["type"] == "damage" and
-            event.get("targetID") == self._boss_target_id and
-            event.get("hitPoints") and event.get("maxHitPoints")):
-
+        if (
+            event["type"] == "damage"
+            and event.get("targetID") == self._boss_target_id
+            and event.get("hitPoints")
+            and event.get("maxHitPoints")
+        ):
             hp_percentage = (event["hitPoints"] / event["maxHitPoints"]) * 100
 
             # Start dead zone when boss hits 20% HP
-            if hp_percentage <= 20 and not hasattr(self, '_tornado_phase_started'):
+            if hp_percentage <= 20 and not hasattr(self, "_tornado_phase_started"):
                 self._tornado_phase_started = True
                 self._last_event = event
                 return
 
         # Track player combat actions on the boss to detect when dead zone ends
-        if (event.get("targetID") == self._boss_target_id and
-            event["type"] in ("cast", "damage") and
-            event["sourceID"] == self._fight.source.id):
-
+        if (
+            event.get("targetID") == self._boss_target_id
+            and event["type"] in ("cast", "damage")
+            and event["sourceID"] == self._fight.source.id
+        ):
             # If we're in tornado phase and player hits boss again, end dead zone
-            if (hasattr(self, '_tornado_phase_started') and
-                self._tornado_phase_started and
-                self._last_event):
-
-                dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            if (
+                hasattr(self, "_tornado_phase_started")
+                and self._tornado_phase_started
+                and self._last_event
+            ):
+                dead_zone = DeadZoneAnalyzer.DeadZone(
+                    self._last_event["timestamp"], event["timestamp"]
+                )
                 self._dead_zones.append(dead_zone)
                 self._tornado_phase_started = False
                 self._last_event = None
@@ -293,14 +300,16 @@ class DeadZoneAnalyzer(BasePreprocessor):
         Creates deadzones when the boss gains 99% damage immunity while Amber Monstrosity is alive.
         """
         # Initialize boss targetID detection on first relevant event
-        if not hasattr(self, '_boss_target_id'):
+        if not hasattr(self, "_boss_target_id"):
             self._boss_target_id = None
             self._max_hp_seen = 0
 
         # Identify boss by highest maxHitPoints (typically 500M+ HP)
-        if (event["type"] == "damage" and
-            event.get("maxHitPoints") and
-            event["maxHitPoints"] > self._max_hp_seen):
+        if (
+            event["type"] == "damage"
+            and event.get("maxHitPoints")
+            and event["maxHitPoints"] > self._max_hp_seen
+        ):
             self._max_hp_seen = event["maxHitPoints"]
             self._boss_target_id = event.get("targetID")
 
@@ -320,7 +329,9 @@ class DeadZoneAnalyzer(BasePreprocessor):
             self._last_event = event
         elif event["type"] == "removebuff" and self._last_event:
             # End deadzone when Amber Carapace is removed
-            dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            dead_zone = DeadZoneAnalyzer.DeadZone(
+                self._last_event["timestamp"], event["timestamp"]
+            )
             self._dead_zones.append(dead_zone)
             self._last_event = None
 
@@ -331,14 +342,16 @@ class DeadZoneAnalyzer(BasePreprocessor):
         and cannot attack the boss. Dead zone ends when the phase ends.
         """
         # Initialize boss targetID detection on first relevant event
-        if not hasattr(self, '_boss_target_id'):
+        if not hasattr(self, "_boss_target_id"):
             self._boss_target_id = None
             self._max_hp_seen = 0
 
         # Identify boss by highest maxHitPoints (typically 500M+ HP)
-        if (event["type"] == "damage" and
-            event.get("maxHitPoints") and
-            event["maxHitPoints"] > self._max_hp_seen):
+        if (
+            event["type"] == "damage"
+            and event.get("maxHitPoints")
+            and event["maxHitPoints"] > self._max_hp_seen
+        ):
             self._max_hp_seen = event["maxHitPoints"]
             self._boss_target_id = event.get("targetID")
 
@@ -358,7 +371,9 @@ class DeadZoneAnalyzer(BasePreprocessor):
             self._last_event = event
         elif event["type"] == "removebuff" and self._last_event:
             # End deadzone when Dissonance Field is removed
-            dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            dead_zone = DeadZoneAnalyzer.DeadZone(
+                self._last_event["timestamp"], event["timestamp"]
+            )
             self._dead_zones.append(dead_zone)
             self._last_event = None
 
@@ -369,14 +384,16 @@ class DeadZoneAnalyzer(BasePreprocessor):
         must focus on healing the Sunbeam. Dead zone ends when Night phase begins.
         """
         # Initialize boss targetID detection on first relevant event
-        if not hasattr(self, '_boss_target_id'):
+        if not hasattr(self, "_boss_target_id"):
             self._boss_target_id = None
             self._max_hp_seen = 0
 
         # Identify boss by highest maxHitPoints (typically 500M+ HP)
-        if (event["type"] == "damage" and
-            event.get("maxHitPoints") and
-            event["maxHitPoints"] > self._max_hp_seen):
+        if (
+            event["type"] == "damage"
+            and event.get("maxHitPoints")
+            and event["maxHitPoints"] > self._max_hp_seen
+        ):
             self._max_hp_seen = event["maxHitPoints"]
             self._boss_target_id = event.get("targetID")
 
@@ -397,7 +414,9 @@ class DeadZoneAnalyzer(BasePreprocessor):
             self._last_event = event
         elif event["type"] == "removebuff" and self._last_event:
             # End deadzone when Day phase ends (Night phase begins)
-            dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            dead_zone = DeadZoneAnalyzer.DeadZone(
+                self._last_event["timestamp"], event["timestamp"]
+            )
             self._dead_zones.append(dead_zone)
             self._last_event = None
 
@@ -408,14 +427,16 @@ class DeadZoneAnalyzer(BasePreprocessor):
         Dead zone ends when she reappears and can be targeted again.
         """
         # Initialize boss targetID detection on first relevant event
-        if not hasattr(self, '_boss_target_id'):
+        if not hasattr(self, "_boss_target_id"):
             self._boss_target_id = None
             self._max_hp_seen = 0
 
         # Identify boss by highest maxHitPoints (typically 500M+ HP)
-        if (event["type"] == "damage" and
-            event.get("maxHitPoints") and
-            event["maxHitPoints"] > self._max_hp_seen):
+        if (
+            event["type"] == "damage"
+            and event.get("maxHitPoints")
+            and event["maxHitPoints"] > self._max_hp_seen
+        ):
             self._max_hp_seen = event["maxHitPoints"]
             self._boss_target_id = event.get("targetID")
 
@@ -435,7 +456,9 @@ class DeadZoneAnalyzer(BasePreprocessor):
             self._last_event = event
         elif event["type"] == "removebuff" and self._last_event:
             # End deadzone when Hide is removed (boss becomes targetable)
-            dead_zone = DeadZoneAnalyzer.DeadZone(self._last_event["timestamp"], event["timestamp"])
+            dead_zone = DeadZoneAnalyzer.DeadZone(
+                self._last_event["timestamp"], event["timestamp"]
+            )
             self._dead_zones.append(dead_zone)
             self._last_event = None
 
@@ -445,7 +468,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
 
         return self._checker(event)
 
-    def get_recent_dead_zone(self, end) -> Optional[DeadZone]:
+    def get_recent_dead_zone(self, end) -> DeadZone | None:
         for dead_zone in reversed(self._dead_zones):
             # returns the closest dead-zone
             if dead_zone.start <= end:
@@ -639,7 +662,9 @@ class RuneHasteTracker(BaseAnalyzer):
 
 
 class RuneTracker(BaseAnalyzer):
-    def __init__(self, should_convert_blood, should_convert_frost, start_with_death_runes=False):
+    def __init__(
+        self, should_convert_blood, should_convert_frost, start_with_death_runes=False
+    ):
         if start_with_death_runes:
             # MoP Frost DK: starts with 2 death runes instead of 2 blood runes
             self.runes = [
@@ -805,7 +830,8 @@ class RuneTracker(BaseAnalyzer):
 
         # Count death runes (including those that started as death runes)
         death_count = sum(
-            1 for rune in self.runes
+            1
+            for rune in self.runes
             if (rune.is_death or rune.blood_tapped) and rune.can_spend(timestamp)
         )
 
@@ -1019,7 +1045,9 @@ class BuffTracker(BaseAnalyzer, BasePreprocessor):
     @property
     def has_flask(self):
         # Check for MoP flasks that DKs would use
-        return bool(self._num_windows("Flask of Winter's Bite")) or bool(self._num_windows("Flask of Falling Leaves"))
+        return bool(self._num_windows("Flask of Winter's Bite")) or bool(
+            self._num_windows("Flask of Falling Leaves")
+        )
 
     @property
     def num_pots(self):
@@ -1267,7 +1295,7 @@ class DebuffTracker(BaseAnalyzer, BasePreprocessor):
         if event["type"] not in (
             "applydebuff",
             "removedebuff",
-            "removedebuffstack", 
+            "removedebuffstack",
             "refreshdebuff",
         ):
             return
@@ -1562,8 +1590,6 @@ class TalentPreprocessor(BasePreprocessor):
         event["disease_duration"] = self._disease_duration
 
 
-
-
 class SoulReaperAnalyzer(BaseAnalyzer):
     def __init__(self, fight_duration, fight_end_time, ignore_windows=None):
         self._fight_duration = fight_duration
@@ -1577,12 +1603,13 @@ class SoulReaperAnalyzer(BaseAnalyzer):
 
     def add_event(self, event):
         # Track boss HP to detect 35% threshold - identify boss by highest max HP
-        if (event["type"] == "damage" and
-            event.get("hitPoints") and event.get("maxHitPoints")):
-
+        if (
+            event["type"] == "damage"
+            and event.get("hitPoints")
+            and event.get("maxHitPoints")
+        ):
             # Identify boss as target with highest max HP
-            if (self._boss_max_hp is None or
-                event["maxHitPoints"] > self._boss_max_hp):
+            if self._boss_max_hp is None or event["maxHitPoints"] > self._boss_max_hp:
                 self._boss_target_id = event["targetID"]
                 self._boss_max_hp = event["maxHitPoints"]
 
@@ -1596,10 +1623,11 @@ class SoulReaperAnalyzer(BaseAnalyzer):
                     self._execute_phase_start = event["timestamp"]
 
         # Track Soul Reaper hits/damage - only on boss target
-        if (event["type"] == "damage" and
-            event.get("abilityGameID") == 114867 and
-            event["targetID"] == self._boss_target_id):
-
+        if (
+            event["type"] == "damage"
+            and event.get("abilityGameID") == 114867
+            and event["targetID"] == self._boss_target_id
+        ):
             # Check if this hit occurred within 3 seconds AFTER execute phase starts
             time_after_execute = None
             hit_in_execute_window = False
@@ -1607,15 +1635,17 @@ class SoulReaperAnalyzer(BaseAnalyzer):
             if self._execute_phase_start is not None:
                 time_after_execute = event["timestamp"] - self._execute_phase_start
                 # Count all hits AFTER execute phase starts (entire execute window)
-                hit_in_execute_window = (time_after_execute > 0)
+                hit_in_execute_window = time_after_execute > 0
 
-            self._soul_reaper_hits.append({
-                "timestamp": event["timestamp"],
-                "target": event.get("targetID"),
-                "damage": event.get("amount", 0),
-                "time_after_execute": time_after_execute,
-                "hit_in_execute_window": hit_in_execute_window
-            })
+            self._soul_reaper_hits.append(
+                {
+                    "timestamp": event["timestamp"],
+                    "target": event.get("targetID"),
+                    "damage": event.get("amount", 0),
+                    "time_after_execute": time_after_execute,
+                    "hit_in_execute_window": hit_in_execute_window,
+                }
+            )
 
     @property
     def execute_phase_duration(self):
@@ -1631,7 +1661,9 @@ class SoulReaperAnalyzer(BaseAnalyzer):
 
         # Calculate uptime during execute phase, accounting for dead zones
         execute_window = Window(self._execute_phase_start, self._fight_end_time)
-        execute_uptime = calculate_uptime([execute_window], self._ignore_windows, base_duration)
+        execute_uptime = calculate_uptime(
+            [execute_window], self._ignore_windows, base_duration
+        )
 
         # Return the actual uptime duration (not percentage)
         return execute_uptime * base_duration
@@ -1690,7 +1722,10 @@ class SoulReaperAnalyzer(BaseAnalyzer):
 
         # Bonus points for quick first hit (within 3 seconds of execute phase)
         first_hit_bonus = 0
-        if self.first_soul_reaper_hit_delay is not None and self.first_soul_reaper_hit_delay <= 3000:
+        if (
+            self.first_soul_reaper_hit_delay is not None
+            and self.first_soul_reaper_hit_delay <= 3000
+        ):
             first_hit_bonus = 0.1
 
         return min(1.0, hit_score + first_hit_bonus)
@@ -1700,14 +1735,23 @@ class SoulReaperAnalyzer(BaseAnalyzer):
             "soul_reaper": {
                 "execute_phase_detected": self._execute_phase_start is not None,
                 "execute_phase_start": self._execute_phase_start,
-                "execute_phase_duration": self.execute_phase_duration / 1000 if self.execute_phase_duration > 0 else 0,
+                "execute_phase_duration": (
+                    self.execute_phase_duration / 1000
+                    if self.execute_phase_duration > 0
+                    else 0
+                ),
                 "total_hits": len(self._soul_reaper_hits),
                 "execute_window_hits": len(self.soul_reaper_hits_in_execute_window),
                 "max_possible_hits": self.max_possible_soul_reapers,
-                "first_hit_delay": self.first_soul_reaper_hit_delay / 1000 if self.first_soul_reaper_hit_delay is not None else None,
-                "hit_efficiency": len(self.soul_reaper_hits_in_execute_window) / max(1, self.max_possible_soul_reapers),
+                "first_hit_delay": (
+                    self.first_soul_reaper_hit_delay / 1000
+                    if self.first_soul_reaper_hit_delay is not None
+                    else None
+                ),
+                "hit_efficiency": len(self.soul_reaper_hits_in_execute_window)
+                / max(1, self.max_possible_soul_reapers),
                 "score": self.score(),
-                "hits": self._soul_reaper_hits
+                "hits": self._soul_reaper_hits,
             }
         }
 
@@ -1725,7 +1769,9 @@ class EmpoweredRuneWeaponAnalyzer(BaseAnalyzer):
             rp_before = event.get("runic_power", 0)
 
             # Count available runes before ERW (these will be wasted)
-            available_runes = sum(1 for rune in runes_before if rune.get("is_available", False))
+            available_runes = sum(
+                1 for rune in runes_before if rune.get("is_available", False)
+            )
 
             # Calculate RP waste (cap is 100, ERW gives 25)
             rp_waste = max(0, min(25, (rp_before + 25) - 100))
@@ -1747,7 +1793,7 @@ class EmpoweredRuneWeaponAnalyzer(BaseAnalyzer):
 
         # Calculate efficiency based on total waste
         total_possible_runes = len(self._erw_usages) * 6  # 6 runes per ERW
-        total_possible_rp = len(self._erw_usages) * 25   # 25 RP per ERW
+        total_possible_rp = len(self._erw_usages) * 25  # 25 RP per ERW
 
         rune_efficiency = 1 - (self._total_runes_wasted / max(1, total_possible_runes))
         rp_efficiency = 1 - (self._total_rp_wasted / max(1, total_possible_rp))
@@ -1761,8 +1807,10 @@ class EmpoweredRuneWeaponAnalyzer(BaseAnalyzer):
                 "num_usages": len(self._erw_usages),
                 "total_runes_wasted": self._total_runes_wasted,
                 "total_rp_wasted": self._total_rp_wasted,
-                "average_runes_wasted": self._total_runes_wasted / max(1, len(self._erw_usages)),
-                "average_rp_wasted": self._total_rp_wasted / max(1, len(self._erw_usages)),
+                "average_runes_wasted": self._total_runes_wasted
+                / max(1, len(self._erw_usages)),
+                "average_rp_wasted": self._total_rp_wasted
+                / max(1, len(self._erw_usages)),
                 "usages": self._erw_usages,
             }
         }
@@ -1792,13 +1840,15 @@ class BloodChargeCapAnalyzer(BaseAnalyzer):
             # Check if player starts with Blood Charge buff
             auras = event.get("auras", [])
             for aura in auras:
-                if aura.get("ability") == "Blood Charge" or aura.get("abilityGameID") == 114851:
+                if (
+                    aura.get("ability") == "Blood Charge"
+                    or aura.get("abilityGameID") == 114851
+                ):
                     self._current_charges = aura.get("stacks", 0)
                     break
 
         # First set current charges on the event (this will be the "before" state)
         event["blood_charges"] = self._current_charges
-
 
         # Track Blood Charge stacks from actual buff events (spell ID: 114851)
         if event.get("abilityGameID") == 114851:
@@ -1819,14 +1869,18 @@ class BloodChargeCapAnalyzer(BaseAnalyzer):
 
                     self._charge_caps += 1
                     self._total_charges_wasted += charges_wasted
-                    self._cap_events.append({
-                        "timestamp": event["timestamp"],  # Use the buff event timestamp
-                        "type": "blood_charge_cap",
-                        "ability": "Blood Charge Waste",
-                        "charges_before": old_charges,
-                        "charges_wasted": charges_wasted,
-                        "message": f"Blood Charge Waste: {charges_wasted} charge(s) wasted (was at {old_charges}/12)"
-                    })
+                    self._cap_events.append(
+                        {
+                            "timestamp": event[
+                                "timestamp"
+                            ],  # Use the buff event timestamp
+                            "type": "blood_charge_cap",
+                            "ability": "Blood Charge Waste",
+                            "charges_before": old_charges,
+                            "charges_wasted": charges_wasted,
+                            "message": f"Blood Charge Waste: {charges_wasted} charge(s) wasted (was at {old_charges}/12)",
+                        }
+                    )
 
             elif event["type"] == "removebuffstack":
                 new_charges = event.get("stack", 0)
@@ -1835,7 +1889,9 @@ class BloodChargeCapAnalyzer(BaseAnalyzer):
                 event["blood_charges"] = new_charges
             elif event["type"] == "applybuff":
                 # First time buff is applied - but check if there's a stack count
-                initial_charges = event.get("stack", 2)  # Default to 2 if no stack specified
+                initial_charges = event.get(
+                    "stack", 2
+                )  # Default to 2 if no stack specified
                 self._current_charges = initial_charges
                 event["blood_charges"] = initial_charges
             elif event["type"] == "removebuff":
@@ -1886,9 +1942,7 @@ class SynapseSpringsAnalyzer(BaseAnalyzer):
         dead_zone_duration = sum(window.duration for window in self._ignore_windows)
         effective_duration = self._fight_duration - dead_zone_duration
 
-        return max(
-            1 + (effective_duration - 5000) // 63000, self._num_synapse_springs
-        )
+        return max(1 + (effective_duration - 5000) // 63000, self._num_synapse_springs)
 
     def score(self):
         return (
@@ -2059,8 +2113,7 @@ class BuffUptimeAnalyzer(BaseAnalyzer):
 
     def _get_windows(self):
         for buff_name in self._buff_names:
-            for window in self._buff_tracker.get_windows(buff_name):
-                yield window
+            yield from self._buff_tracker.get_windows(buff_name)
 
     def set_start_time(self, start_time):
         self._start_time = start_time
@@ -2068,7 +2121,7 @@ class BuffUptimeAnalyzer(BaseAnalyzer):
     def _clamp_windows(self, windows):
         clamped_windows = []
 
-        for i, window in enumerate(windows):
+        for _i, window in enumerate(windows):
             if not range_overlap(
                 (window.start, window.end), (self._start_time, self._end_time)
             ):
@@ -2203,10 +2256,12 @@ class ArmyWindow(Window):
                 max_duration=trinket.proc_duration - 25,
             )
             self._uptimes.append(uptime)
-            self.trinket_uptimes.append({
-                "trinket": trinket,
-                "uptime": uptime,
-            })
+            self.trinket_uptimes.append(
+                {
+                    "trinket": trinket,
+                    "uptime": uptime,
+                }
+            )
 
     def _set_army_first_attack(self, event):
         self._army_first_attack = event["timestamp"]
@@ -2282,13 +2337,19 @@ class ArmyWindow(Window):
             ScoreWeight(self.synapse_springs_uptime / army_duration, 2),
             ScoreWeight(self.fallen_crusader_uptime / army_duration, 3),
             ScoreWeight(self.potion_uptime / army_duration, 3),
-            ScoreWeight(self.pillar_of_frost_uptime / army_duration, 2),  # Lower weight since not always available
+            ScoreWeight(
+                self.pillar_of_frost_uptime / army_duration, 2
+            ),  # Lower weight since not always available
             # Performance score based on attacks (expect ~80 attacks in 40s from 8 ghouls)
             ScoreWeight(min(1, self.num_attacks / 80), 4),
             # Trinket uptime score
             ScoreWeight(
-                sum(t["uptime"] for t in self.trinket_snapshots) /
-                (army_duration * len(self.trinket_snapshots)) if self.trinket_snapshots else 0,
+                (
+                    sum(t["uptime"] for t in self.trinket_snapshots)
+                    / (army_duration * len(self.trinket_snapshots))
+                    if self.trinket_snapshots
+                    else 0
+                ),
                 len(self.trinket_snapshots) * 2,
             ),
             # Blood Fury uptime score
@@ -2298,7 +2359,11 @@ class ArmyWindow(Window):
             ),
             # Berserking uptime score
             ScoreWeight(
-                self.berserking_uptime / army_duration if self._berserking_uptime else 0,
+                (
+                    self.berserking_uptime / army_duration
+                    if self._berserking_uptime
+                    else 0
+                ),
                 2 if self._berserking_uptime else 0,
             ),
             # Bloodlust uptime score
@@ -2313,7 +2378,7 @@ class ArmyAnalyzer(BaseAnalyzer):
     INCLUDE_PET_EVENTS = True
 
     def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
-        self.windows: List[ArmyWindow] = []
+        self.windows: list[ArmyWindow] = []
         self._window = None
         self._buff_tracker = buff_tracker
         self._fight_duration = fight_duration
@@ -2354,9 +2419,7 @@ class ArmyAnalyzer(BaseAnalyzer):
     def score(self):
         window_score = sum(window.score() for window in self.windows)
         return ScoreWeight.calculate(
-            ScoreWeight(
-                window_score / self.possible_armies, 5 * self.possible_armies
-            ),
+            ScoreWeight(window_score / self.possible_armies, 5 * self.possible_armies),
         )
 
     def report(self):
@@ -2408,9 +2471,9 @@ class PlagueLeechAnalyzer(BaseAnalyzer):
         self._has_plague_leech_talent = False
 
         # Check if player has Plague Leech talent (talent ID 123693)
-        talents = combatant_info.get('talents', [])
+        talents = combatant_info.get("talents", [])
         for talent in talents:
-            if talent.get('id') == 123693:
+            if talent.get("id") == 123693:
                 self._has_plague_leech_talent = True
                 break
 
@@ -2434,9 +2497,13 @@ class PlagueLeechAnalyzer(BaseAnalyzer):
         # Plague Leech has 25 second cooldown
         # First cast available around 30 seconds (when first diseases are dropping)
         # Then every 25 seconds after that
-        if self._fight_duration < 30000:  # Less than 30 seconds, no Plague Leech expected
+        if (
+            self._fight_duration < 30000
+        ):  # Less than 30 seconds, no Plague Leech expected
             return 0
-        return max(1 + (self._fight_duration - 30000) // 25000, len(self._plague_leech_casts))
+        return max(
+            1 + (self._fight_duration - 30000) // 25000, len(self._plague_leech_casts)
+        )
 
     @property
     def actual_plague_leeches(self):

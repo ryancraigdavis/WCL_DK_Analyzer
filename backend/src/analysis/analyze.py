@@ -1,19 +1,19 @@
 from analysis.core_analysis import (
-    PrepullArmyOfTheDeadTracker,
+    BloodChargeCapAnalyzer,
+    BuffTracker,
     CoreAnalysisConfig,
     DeadZoneAnalyzer,
-    TalentPreprocessor,
-    BuffTracker,
     DebuffTracker,
     PetNameDetector,
+    PrepullArmyOfTheDeadTracker,
     RuneHasteTracker,
-    BloodChargeCapAnalyzer,
+    TalentPreprocessor,
 )
 from analysis.frost_analysis import (
     FrostAnalysisConfig,
 )
 from analysis.items import ItemPreprocessor, TrinketPreprocessor
-from analysis.unholy_analysis import UnholyAnalysisConfig, FesteringStrikeTracker
+from analysis.unholy_analysis import FesteringStrikeTracker, UnholyAnalysisConfig
 from report import Fight, Report
 
 
@@ -173,7 +173,7 @@ class Analyzer:
         """Remove any events we don't care to analyze or show"""
         events = []
 
-        for i, event in enumerate(self._fight.events):
+        for _i, event in enumerate(self._fight.events):
             # We're neither the source nor the target
             if (
                 event["sourceID"] != self._fight.source.id
@@ -235,7 +235,7 @@ class Analyzer:
                 events.append(event)
 
         # Add death rune waste events from FesteringStrikeTracker and blood charge cap events
-        if hasattr(self, '_analyzers'):
+        if hasattr(self, "_analyzers"):
             for analyzer in self._analyzers:
                 if isinstance(analyzer, FesteringStrikeTracker):
                     for waste_event in analyzer.death_rune_waste_events:
@@ -282,7 +282,12 @@ class Analyzer:
                         events.append(timeline_event)
 
                 # Add KM usage timing events for frost analysis
-                from analysis.frost_analysis import KMAnalyzer, ObliterateAnalyzer, PlagueStrikeAnalyzer
+                from analysis.frost_analysis import (
+                    KMAnalyzer,
+                    ObliterateAnalyzer,
+                    PlagueStrikeAnalyzer,
+                )
+
                 if isinstance(analyzer, KMAnalyzer):
                     for km_event in analyzer._km_usage_events:
                         events.append(km_event)
