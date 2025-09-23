@@ -366,8 +366,15 @@ class DarkTransformationWindow(Window):
             ScoreWeight(self.unholy_frenzy_uptime or 0, 5),
             ScoreWeight(self.bl_uptime or 0, 4),
             ScoreWeight(
-                sum(t["uptime"].uptime() for t in self.trinket_uptimes if t["uptime"].uptime() > 0) /
-                (sum(1 for t in self.trinket_uptimes if t["uptime"].uptime() > 0) or 1),
+                sum(
+                    t["uptime"].uptime()
+                    for t in self.trinket_uptimes
+                    if t["uptime"].uptime() > 0
+                )
+                / (
+                    sum(1 for t in self.trinket_uptimes if t["uptime"].uptime() > 0)
+                    or 1
+                ),
                 sum(2 for t in self.trinket_uptimes if t["uptime"].uptime() > 0),
             ),
         )
@@ -468,7 +475,7 @@ class GargoyleWindow(Window):
         self.start = start
         self.end = min(start + 30000, fight_duration)
         self._gargoyle_first_cast = None
-        
+
         # Dynamic buff tracking for MoP (always create analyzers to show 0% even if buff not present)
         self._synapse_springs_uptime = BuffUptimeAnalyzer(
             self.end,
@@ -551,10 +558,12 @@ class GargoyleWindow(Window):
                 max_duration=trinket.proc_duration - 25,
             )
             self._uptimes.append(uptime)
-            self.trinket_uptimes.append({
-                "trinket": trinket,
-                "uptime": uptime,
-            })
+            self.trinket_uptimes.append(
+                {
+                    "trinket": trinket,
+                    "uptime": uptime,
+                }
+            )
 
     def _set_gargoyle_first_cast(self, event):
         self._gargoyle_first_cast = event["timestamp"]
@@ -613,7 +622,9 @@ class GargoyleWindow(Window):
                 "name": trinket_data["trinket"].name,
                 "icon": trinket_data["trinket"].icon,
                 "did_snapshot": trinket_data["uptime"].uptime() > 0,
-                "uptime": trinket_data["uptime"].uptime(),  # Return as fraction for formatUpTime
+                "uptime": trinket_data[
+                    "uptime"
+                ].uptime(),  # Return as fraction for formatUpTime
             }
             for trinket_data in self.trinket_uptimes
         ]
@@ -647,21 +658,21 @@ class GargoyleWindow(Window):
             ScoreWeight(self.synapse_springs_uptime / gargoyle_duration, 2),
             ScoreWeight(self.fallen_crusader_uptime / gargoyle_duration, 3),
             ScoreWeight(self.potion_uptime / gargoyle_duration, 3),
-
             # Performance score based on casts (max ~18 casts in 30s)
             ScoreWeight(self.num_casts / 18, 4),
-
             # Trinket coordination
             ScoreWeight(
-                sum(t["uptime"] for t in self.trinket_snapshots) /
-                (gargoyle_duration * len(self.trinket_snapshots)) if self.trinket_snapshots else 0,
+                (
+                    sum(t["uptime"] for t in self.trinket_snapshots)
+                    / (gargoyle_duration * len(self.trinket_snapshots))
+                    if self.trinket_snapshots
+                    else 0
+                ),
                 len(self.trinket_snapshots) * 2,
             ),
-
             # Race abilities
             ScoreWeight(self.bloodfury_uptime / gargoyle_duration, 2),
             ScoreWeight(self.berserking_uptime / gargoyle_duration, 2),
-
             # Bloodlust coordination
             ScoreWeight(self.bloodlust_uptime / gargoyle_duration, 3),
         )
@@ -822,9 +833,21 @@ class FesteringStrikeTracker(BaseAnalyzer):
                 return  # Don't count FS waste during major haste buffs
 
             # Check what was available before cast
-            blood_available = sum(1 for rune in runes_before if rune["name"] == "Blood" and rune["is_available"])
-            frost_available = sum(1 for rune in runes_before if rune["name"] == "Frost" and rune["is_available"])
-            death_available = sum(1 for rune in runes_before if rune["name"] == "Death" and rune["is_available"])
+            blood_available = sum(
+                1
+                for rune in runes_before
+                if rune["name"] == "Blood" and rune["is_available"]
+            )
+            frost_available = sum(
+                1
+                for rune in runes_before
+                if rune["name"] == "Frost" and rune["is_available"]
+            )
+            death_available = sum(
+                1
+                for rune in runes_before
+                if rune["name"] == "Death" and rune["is_available"]
+            )
 
             # Player decision analysis: Should they have waited for Blood+Frost?
             if blood_available < 1 or frost_available < 1:
@@ -834,24 +857,28 @@ class FesteringStrikeTracker(BaseAnalyzer):
                 if blood_available < 1 and frost_available < 1:
                     # No Blood, no Frost - will use 2 death runes
                     self.two_death_rune_casts += 1
-                    self.death_rune_waste_events.append({
-                        "timestamp": event["timestamp"],
-                        "type": "death_rune_waste",
-                        "ability": "Festering Strike",
-                        "death_runes_wasted": 2,
-                        "message": f"Festering Strike cast with no Blood or Frost available (will use 2 death runes)"
-                    })
+                    self.death_rune_waste_events.append(
+                        {
+                            "timestamp": event["timestamp"],
+                            "type": "death_rune_waste",
+                            "ability": "Festering Strike",
+                            "death_runes_wasted": 2,
+                            "message": f"Festering Strike cast with no Blood or Frost available (will use 2 death runes)",
+                        }
+                    )
                 else:
                     # Missing either Blood or Frost - will use 1 death rune
                     missing = "Blood" if blood_available < 1 else "Frost"
                     self.one_death_rune_casts += 1
-                    self.death_rune_waste_events.append({
-                        "timestamp": event["timestamp"],
-                        "type": "death_rune_waste",
-                        "ability": "Festering Strike",
-                        "death_runes_wasted": 1,
-                        "message": f"Festering Strike cast without {missing} rune available (will use 1 death rune)"
-                    })
+                    self.death_rune_waste_events.append(
+                        {
+                            "timestamp": event["timestamp"],
+                            "type": "death_rune_waste",
+                            "ability": "Festering Strike",
+                            "death_runes_wasted": 1,
+                            "message": f"Festering Strike cast without {missing} rune available (will use 1 death rune)",
+                        }
+                    )
             # If both Blood+Frost were available, this is optimal - no waste
 
     def score(self):
@@ -870,7 +897,8 @@ class FesteringStrikeTracker(BaseAnalyzer):
             "festering_strike_waste": {
                 "one_death_rune_casts": self.one_death_rune_casts,
                 "two_death_rune_casts": self.two_death_rune_casts,
-                "total_death_runes_wasted": self.one_death_rune_casts + (self.two_death_rune_casts * 2),
+                "total_death_runes_wasted": self.one_death_rune_casts
+                + (self.two_death_rune_casts * 2),
                 "waste_events": self.death_rune_waste_events,
             }
         }
@@ -1019,21 +1047,47 @@ class OutbreakSnapshot:
         self.timestamp = timestamp
         self.blood_fury = buff_tracker.is_active("Blood Fury", timestamp)
         self.synapse_springs = buff_tracker.is_active("Synapse Springs", timestamp)
-        self.potion_of_mogu_power = buff_tracker.is_active("Potion of Mogu Power", timestamp)
+        self.potion_of_mogu_power = buff_tracker.is_active(
+            "Potion of Mogu Power", timestamp
+        )
         self.fallen_crusader = buff_tracker.is_active("Unholy Strength", timestamp)
-        self.lei_shen_final_orders = buff_tracker.is_active("Unwavering Might", timestamp)
-        self.relic_of_xuen = buff_tracker.is_active("Blessing of the Celestials", timestamp)
+        self.lei_shen_final_orders = buff_tracker.is_active(
+            "Unwavering Might", timestamp
+        )
+        self.relic_of_xuen = buff_tracker.is_active(
+            "Blessing of the Celestials", timestamp
+        )
 
         # Check if player is orc for Blood Fury relevance
         self.is_orc = combatant_info.get("race") == 2  # Orc race ID
 
         # Check if buffs were ever available during the fight
-        self.has_blood_fury = buff_tracker.has_bloodfury if hasattr(buff_tracker, 'has_bloodfury') else len(buff_tracker.get_windows("Blood Fury")) > 0
-        self.has_synapse_springs = buff_tracker.has_synapse_springs if hasattr(buff_tracker, 'has_synapse_springs') else len(buff_tracker.get_windows("Synapse Springs")) > 0
-        self.has_potion = buff_tracker.has_potion if hasattr(buff_tracker, 'has_potion') else len(buff_tracker.get_windows("Potion of Mogu Power")) > 0
-        self.has_fallen_crusader = buff_tracker.has_fallen_crusader if hasattr(buff_tracker, 'has_fallen_crusader') else len(buff_tracker.get_windows("Unholy Strength")) > 0
-        self.has_lei_shen_final_orders = len(buff_tracker.get_windows("Unwavering Might")) > 0
-        self.has_relic_of_xuen = len(buff_tracker.get_windows("Blessing of the Celestials")) > 0
+        self.has_blood_fury = (
+            buff_tracker.has_bloodfury
+            if hasattr(buff_tracker, "has_bloodfury")
+            else len(buff_tracker.get_windows("Blood Fury")) > 0
+        )
+        self.has_synapse_springs = (
+            buff_tracker.has_synapse_springs
+            if hasattr(buff_tracker, "has_synapse_springs")
+            else len(buff_tracker.get_windows("Synapse Springs")) > 0
+        )
+        self.has_potion = (
+            buff_tracker.has_potion
+            if hasattr(buff_tracker, "has_potion")
+            else len(buff_tracker.get_windows("Potion of Mogu Power")) > 0
+        )
+        self.has_fallen_crusader = (
+            buff_tracker.has_fallen_crusader
+            if hasattr(buff_tracker, "has_fallen_crusader")
+            else len(buff_tracker.get_windows("Unholy Strength")) > 0
+        )
+        self.has_lei_shen_final_orders = (
+            len(buff_tracker.get_windows("Unwavering Might")) > 0
+        )
+        self.has_relic_of_xuen = (
+            len(buff_tracker.get_windows("Blessing of the Celestials")) > 0
+        )
 
     def get_snapshot_quality(self):
         """Calculate a quality score for this snapshot (0-1)"""
@@ -1047,7 +1101,9 @@ class OutbreakSnapshot:
                 buffs_snapshotted += 1
 
         # Always relevant buffs
-        max_possible_buffs += 5  # synapse, potion, fallen crusader, lei shen, relic of xuen
+        max_possible_buffs += (
+            5  # synapse, potion, fallen crusader, lei shen, relic of xuen
+        )
 
         if self.synapse_springs:
             buffs_snapshotted += 1
@@ -1087,11 +1143,11 @@ class OutbreakSnapshotTracker(BaseAnalyzer):
         self._outbreak_snapshots = []
 
     def add_event(self, event):
-        if event["type"] == "cast" and event.get("abilityGameID") == 77575:  # Outbreak spell ID
+        if (
+            event["type"] == "cast" and event.get("abilityGameID") == 77575
+        ):  # Outbreak spell ID
             snapshot = OutbreakSnapshot(
-                event["timestamp"],
-                self._buff_tracker,
-                self._combatant_info
+                event["timestamp"], self._buff_tracker, self._combatant_info
             )
             self._outbreak_snapshots.append(snapshot)
 
@@ -1103,17 +1159,27 @@ class OutbreakSnapshotTracker(BaseAnalyzer):
     def average_snapshot_quality(self):
         if not self._outbreak_snapshots:
             return 0
-        return sum(snapshot.get_snapshot_quality() for snapshot in self._outbreak_snapshots) / len(self._outbreak_snapshots)
+        return sum(
+            snapshot.get_snapshot_quality() for snapshot in self._outbreak_snapshots
+        ) / len(self._outbreak_snapshots)
 
     @property
     def perfect_snapshots(self):
         """Count outbreaks with maximum possible buffs"""
-        return sum(1 for snapshot in self._outbreak_snapshots if snapshot.get_snapshot_quality() >= 0.9)
+        return sum(
+            1
+            for snapshot in self._outbreak_snapshots
+            if snapshot.get_snapshot_quality() >= 0.9
+        )
 
     @property
     def poor_snapshots(self):
         """Count outbreaks with no buffs snapshotted"""
-        return sum(1 for snapshot in self._outbreak_snapshots if snapshot.get_snapshot_count() == 0)
+        return sum(
+            1
+            for snapshot in self._outbreak_snapshots
+            if snapshot.get_snapshot_count() == 0
+        )
 
     def score(self):
         if not self._outbreak_snapshots:
@@ -1157,10 +1223,9 @@ class OutbreakSnapshotTracker(BaseAnalyzer):
                         "has_relic_of_xuen": snapshot.has_relic_of_xuen,
                     }
                     for snapshot in self._outbreak_snapshots
-                ]
+                ],
             }
         }
-
 
 
 class AMSAnalyzer(BaseAnalyzer):
@@ -1202,22 +1267,18 @@ class UnholyAnalysisScorer(AnalysisScorer):
             DarkTransformationUptimeAnalyzer: {"weight": 8},
             DarkTransformationAnalyzer: {"weight": 4},
             GhoulAnalyzer: {"weight": 3},
-
             # Disease/DoT Management (25% total weight)
             BloodPlagueAnalyzer: {"weight": 8},
             FrostFeverAnalyzer: {"weight": 8},
             SoulReaperAnalyzer: {"weight": 9},
-
             # Resource Efficiency (25% total weight)
             RPAnalyzer: {"weight": 8},
             DeathAndDecayUptimeAnalyzer: {"weight": 9},
             MeleeUptimeAnalyzer: {"weight": 8},
-
             # Buff Coordination (25% total weight)
             SynapseSpringsAnalyzer: {"weight": 8},
             TrinketAnalyzer: {"weight": 8},
             OutbreakSnapshotTracker: {"weight": 9},
-
             # Minor components (keep minimal weight for completeness)
             UnholyPresenceUptimeAnalyzer: {"weight": 1},
             BuffTracker: {"weight": 1},
@@ -1254,7 +1315,9 @@ class UnholyAnalysisConfig(CoreAnalysisConfig):
             UnholyPresenceUptimeAnalyzer(fight.duration, buff_tracker, dead_zones),
             ArmyAnalyzer(fight.duration, buff_tracker, dead_zones, items),
             FesteringStrikeTracker(),
-            SoulReaperAnalyzer(fight.duration, fight.start_time + fight.duration, dead_zones),
+            SoulReaperAnalyzer(
+                fight.duration, fight.start_time + fight.duration, dead_zones
+            ),
             OutbreakSnapshotTracker(buff_tracker, combatant_info),
             PlagueLeechAnalyzer(fight.duration, combatant_info),
             # AMSAnalyzer(fight.end_time)

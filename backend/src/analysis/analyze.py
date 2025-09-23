@@ -235,7 +235,7 @@ class Analyzer:
                 events.append(event)
 
         # Add death rune waste events from FesteringStrikeTracker and blood charge cap events
-        if hasattr(self, '_analyzers'):
+        if hasattr(self, "_analyzers"):
             for analyzer in self._analyzers:
                 if isinstance(analyzer, FesteringStrikeTracker):
                     for waste_event in analyzer.death_rune_waste_events:
@@ -282,7 +282,12 @@ class Analyzer:
                         events.append(timeline_event)
 
                 # Add KM usage timing events for frost analysis
-                from analysis.frost_analysis import KMAnalyzer, ObliterateAnalyzer, PlagueStrikeAnalyzer
+                from analysis.frost_analysis import (
+                    KMAnalyzer,
+                    ObliterateAnalyzer,
+                    PlagueStrikeAnalyzer,
+                )
+
                 if isinstance(analyzer, KMAnalyzer):
                     for km_event in analyzer._km_usage_events:
                         events.append(km_event)
