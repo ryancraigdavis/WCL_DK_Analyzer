@@ -10,8 +10,8 @@ dev = ["pytest", "black", "ruff", "mangum"]
 [tool.hatch.envs.default.scripts]
 dev-server = "cd src && uvicorn api:app --reload"
 # test = "pytest"
-lint = ["black src/", "ruff format src/", "ruff check src/ --fix"]
-lint-check = ["black --check src/", "ruff format --check src/", "ruff check src/"]
+lint = ["black src/", "ruff check src/ --fix"]
+lint-check = ["black --check src/", "ruff check src/"]
 
 [build-system]
 requires = ["hatchling"]
@@ -49,8 +49,3 @@ ignore = [
     "B904",  # raise from None or raise from e
 ]
 
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"

@@ -268,7 +268,6 @@ class DeadZoneAnalyzer(BasePreprocessor):
             and event.get("hitPoints")
             and event.get("maxHitPoints")
         ):
-
             hp_percentage = (event["hitPoints"] / event["maxHitPoints"]) * 100
 
             # Start dead zone when boss hits 20% HP
@@ -283,14 +282,12 @@ class DeadZoneAnalyzer(BasePreprocessor):
             and event["type"] in ("cast", "damage")
             and event["sourceID"] == self._fight.source.id
         ):
-
             # If we're in tornado phase and player hits boss again, end dead zone
             if (
                 hasattr(self, "_tornado_phase_started")
                 and self._tornado_phase_started
                 and self._last_event
             ):
-
                 dead_zone = DeadZoneAnalyzer.DeadZone(
                     self._last_event["timestamp"], event["timestamp"]
                 )
@@ -1612,7 +1609,6 @@ class SoulReaperAnalyzer(BaseAnalyzer):
             and event.get("hitPoints")
             and event.get("maxHitPoints")
         ):
-
             # Identify boss as target with highest max HP
             if self._boss_max_hp is None or event["maxHitPoints"] > self._boss_max_hp:
                 self._boss_target_id = event["targetID"]
@@ -1633,7 +1629,6 @@ class SoulReaperAnalyzer(BaseAnalyzer):
             and event.get("abilityGameID") == 114867
             and event["targetID"] == self._boss_target_id
         ):
-
             # Check if this hit occurred within 3 seconds AFTER execute phase starts
             time_after_execute = None
             hit_in_execute_window = False
