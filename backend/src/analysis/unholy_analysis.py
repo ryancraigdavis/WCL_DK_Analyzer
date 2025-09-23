@@ -632,7 +632,7 @@ class GargoyleWindow(Window):
 
         if event["source"] == "Ebon Gargoyle":
             if (
-                event["type"] in ("cast", "startcast")
+                event["type"] in ("cast", "begincast")
                 and self._gargoyle_first_cast is None
             ):
                 self._set_gargoyle_first_cast(event)
