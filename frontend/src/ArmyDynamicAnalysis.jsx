@@ -13,7 +13,7 @@ export const ArmyDynamicAnalysis = ({ army_dynamic }) => {
           {windows.length === 0 && army_dynamic.num_actual === 0 ? (
             <div className="no-windows">
               <i className="fa fa-info-circle hl" aria-hidden="true"></i>
-              No Army of the Dead casts detected. Cast Army of the Dead to see detailed buff analysis during army windows.
+              No Army of the Dead casts detected. Cast Army of the Dead to see detailed buff analysis during army windows. If Army was cast before the fight started, it will not be detected here.
             </div>
           ) : null}
           {windows.map((window, i) => {

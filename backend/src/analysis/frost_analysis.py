@@ -783,9 +783,6 @@ class FrostAnalysisScorer(AnalysisScorer):
             ObliterateAnalyzer: {
                 "weight": 2,  # Reduced weight since it's now pass/fail rather than CPM optimization
             },
-            RuneTracker: {
-                "weight": 3,
-            },
             KMAnalyzer: {
                 "weight": 1,
             },
@@ -800,30 +797,11 @@ class FrostAnalysisScorer(AnalysisScorer):
                 "weight": 3,
                 "exponent_factor": 1.5,
             },
-            HowlingBlastAnalyzer: {
-                "weight": 0.5,
-            },
-            RimeAnalyzer: {
-                "weight": 0.5,
-            },
-            RaiseDeadAnalyzer: {
-                "weight": lambda rd: rd.possible_raise_deads,
-                "exponent_factor": 1.5,
-            },
             MeleeUptimeAnalyzer: {
                 "weight": 2,
                 "exponent_factor": 1.5,
             },
-            BuffTracker: {
-                "weight": 1,
-            },
             SynapseSpringsAnalyzer: {
-                "weight": 1,
-            },
-            TrinketAnalyzer: {
-                "weight": 1,
-            },
-            RPAnalyzer: {
                 "weight": 1,
             },
             CoreAbilities: {
@@ -835,18 +813,8 @@ class FrostAnalysisScorer(AnalysisScorer):
             PillarOfFrostAnalyzer: {
                 "weight": 2,
             },
-            SoulReaperAnalyzer: {
-                "weight": 1,
-            },
             PlagueStrikeAnalyzer: {
                 "weight": 1,
-            },
-            EmpoweredRuneWeaponAnalyzer: {
-                "weight": 1,
-            },
-            PlagueLeechAnalyzer: {
-                "weight": 2,
-                "exponent_factor": 1.5,
             },
         }
 

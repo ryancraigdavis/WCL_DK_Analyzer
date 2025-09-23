@@ -14,7 +14,7 @@ import { RaiseDeadAnalysis } from "./RaiseDeadAnalysis.jsx"
 import { SoulReaperAnalysis } from "./SoulReaperAnalysis.jsx"
 import { OutbreakAnalysis } from "./OutbreakAnalysis.jsx"
 import { Tabs, Tab } from "./Tabs.jsx"
-import { formatIcon, formatTimestamp, formatUpTime, formatUsage, Tooltip } from "./helpers"
+import { formatIcon, formatTimestamp, formatUpTime, formatUsage } from "./helpers"
 
 const formatRune = (rune, i) => {
   const src = {
@@ -680,25 +680,6 @@ const Summary = () => {
     )
   }, [])
 
-  const formatScore = useCallback(score => {
-    let color = "red"
-    if (score > 0.8) {
-      color = "green"
-    } else if (score > 0.65) {
-      color = "yellow"
-    } else if (score > 0.5) {
-      color = "orange"
-    }
-
-    return (
-      <h2>
-        Analysis score: <span className={`total-score ${color}`}>{(score * 100).toFixed(2)}</span>
-        <span className={"total-score-tooltip"}>
-          <Tooltip tooltipText="A score of how well you did on this fight, based upon Speed, Rotation and Misc. metrics, each weighted differently. Range is 0-100."/>
-        </span>
-      </h2>
-    )
-  }, [])
 
   if (analysis.isLoading || analysis.error) {
     return;
@@ -745,9 +726,6 @@ const Summary = () => {
           <span className={"hl"}>{formatTimestamp(fight.duration)}</span> (
           {formatRanking(fightRanking)})
         </div>
-      </div>
-      <div className={"total-score-div"}>
-        {formatScore(summary.analysis_scores.total_score)}
       </div>
 
       <Tabs defaultTab={0}>
