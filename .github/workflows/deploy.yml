@@ -1,0 +1,100 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
+    - name: Setup Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'yarn'
+        cache-dependency-path: frontend/yarn.lock
+
+    - name: Configure AWS credentials
+      env:
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_WCL_ANALYZER_PROD }}
+      run: |
+        # Get AWS credentials from Doppler
+        export AWS_ACCESS_KEY_ID=$(doppler secrets get AWS_ACCESS_KEY_ID --plain)
+        export AWS_SECRET_ACCESS_KEY=$(doppler secrets get AWS_SECRET_ACCESS_KEY --plain)
+        export AWS_DEFAULT_REGION=$(doppler secrets get AWS_DEFAULT_REGION --plain)
+
+        # Configure AWS CLI
+        aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+        aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+        aws configure set default.region $AWS_DEFAULT_REGION
+
+    - name: Deploy Backend
+      env:
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_WCL_ANALYZER_PROD }}
+      run: |
+        cd backend
+
+        # Setup Python virtual environment
+        python -m venv .venv
+        source .venv/bin/activate
+        pip install -r requirements.txt
+
+        # Export environment variables from Doppler
+        export WCL_FUNCTION_NAME=$(doppler secrets get WCL_FUNCTION_NAME --plain)
+        export AWS_ACCOUNT_ID=$(doppler secrets get AWS_ACCOUNT_ID --plain)
+        export WCL_CLIENT_ID=$(doppler secrets get WCL_CLIENT_ID --plain)
+        export WCL_CLIENT_SECRET=$(doppler secrets get WCL_CLIENT_SECRET --plain)
+
+        # Deploy
+        ./deploy.sh
+
+    - name: Deploy Frontend
+      env:
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_WCL_ANALYZER_PROD }}
+      run: |
+        cd frontend
+
+        # Install dependencies and build
+        yarn install --frozen-lockfile
+        yarn build
+
+        # Deploy to S3 and invalidate CloudFront
+        export AWS_ACCESS_KEY_ID=$(doppler secrets get AWS_ACCESS_KEY_ID --plain)
+        export AWS_SECRET_ACCESS_KEY=$(doppler secrets get AWS_SECRET_ACCESS_KEY --plain)
+        export AWS_DEFAULT_REGION=$(doppler secrets get AWS_DEFAULT_REGION --plain)
+
+        aws s3 cp dist/ s3://wcl-analyzer-frontend/ --recursive
+        aws cloudfront create-invalidation --distribution-id E2QQGL1YVUW0M3 --paths '/*'
+
+        # Cleanup
+        rm -rf dist
+
+    - name: Discord Notification
+      if: always()
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.EBONHOLD_DISCORD_UPDATES_WEBHOOK }}
+      uses: Ilshidur/action-discord@master
+      with:
+        args: |
+          🚀 **WCL DK Analyzer Deployment**
+
+          Status: ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }}
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref_name }}
+
+          Frontend & Backend deployed to AWS!
+          🔗 https://d4a6eolggrfst.cloudfront.net/

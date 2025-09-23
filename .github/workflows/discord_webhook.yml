@@ -11,16 +11,23 @@ jobs:
     if: github.event.pull_request.merged == true
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Get PR details
       id: pr_details
       run: |
-        echo "PR_NUMBER=$(jq --raw-output .pull_request.number $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
-        echo "PR_TITLE=$(jq --raw-output .pull_request.title $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
-        echo "PR_BODY=$(jq --raw-output .pull_request.body $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
-        echo "COMMIT_SHA=$(jq --raw-output .pull_request.merge_commit_sha $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
-        echo "PR_LINK=$(jq --raw-output .pull_request.html_url $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
+        # Use proper delimiter format to handle special characters
+        {
+          echo "PR_NUMBER=$(jq --raw-output .pull_request.number $GITHUB_EVENT_PATH)"
+          echo "PR_TITLE<<EOF"
+          jq --raw-output .pull_request.title $GITHUB_EVENT_PATH
+          echo "EOF"
+          echo "PR_BODY<<EOF"
+          jq --raw-output .pull_request.body $GITHUB_EVENT_PATH
+          echo "EOF"
+          echo "COMMIT_SHA=$(jq --raw-output .pull_request.merge_commit_sha $GITHUB_EVENT_PATH)"
+          echo "PR_LINK=$(jq --raw-output .pull_request.html_url $GITHUB_EVENT_PATH)"
+        } >> $GITHUB_OUTPUT
 
     - name: Extract issue number and create issue link
       id: issue
