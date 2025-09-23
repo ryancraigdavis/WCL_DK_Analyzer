@@ -1,8 +1,7 @@
+import json
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Dict
-import json
 from pathlib import Path
 
 import sentry_sdk
@@ -11,8 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
-from client import fetch_report, PrivateReport, TemporaryUnavailable
 from analysis.analyze import analyze
+from client import PrivateReport, TemporaryUnavailable, fetch_report
 
 SENTRY_ENABLED = os.environ.get("AWS_EXECUTION_ENV") is not None
 if SENTRY_ENABLED:
@@ -47,7 +46,7 @@ app.add_middleware(
 
 
 class AnalyzeResponse(BaseModel):
-    data: Dict
+    data: dict
 
 
 async def save_combat_log(report, report_id: str, fight_id: int, source_id: int):

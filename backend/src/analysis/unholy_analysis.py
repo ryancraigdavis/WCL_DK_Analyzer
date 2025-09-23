@@ -1,31 +1,27 @@
-from collections import defaultdict
-from typing import List
-
 # import os
-import json
+from collections import defaultdict
 
 from analysis.base import (
     AnalysisScorer,
     BaseAnalyzer,
     ScoreWeight,
+    Window,
     calculate_uptime,
     combine_windows,
-    Window,
 )
 from analysis.core_analysis import (
-    BuffTracker,
-    CoreAnalysisConfig,
-    SynapseSpringsAnalyzer,
-    RPAnalyzer,
-    RuneTracker,
-    MeleeUptimeAnalyzer,
-    TrinketAnalyzer,
-    BuffUptimeAnalyzer,
-    # T15UptimeAnalyzer,
-    RuneHasteTracker,
-    SoulReaperAnalyzer,
     ArmyAnalyzer,
+    BuffTracker,
+    BuffUptimeAnalyzer,
+    CoreAnalysisConfig,
+    MeleeUptimeAnalyzer,
     PlagueLeechAnalyzer,
+    RPAnalyzer,
+    # T15UptimeAnalyzer,
+    RuneTracker,
+    SoulReaperAnalyzer,
+    SynapseSpringsAnalyzer,
+    TrinketAnalyzer,
 )
 from analysis.items import ItemPreprocessor
 from report import Fight
@@ -384,7 +380,7 @@ class DarkTransformationAnalyzer(BaseAnalyzer):
     INCLUDE_PET_EVENTS = True
 
     def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
-        self.windows: List[DarkTransformationWindow] = []
+        self.windows: list[DarkTransformationWindow] = []
         self._window = None
         self._buff_tracker = buff_tracker
         self._fight_duration = fight_duration
@@ -682,7 +678,7 @@ class GargoyleAnalyzer(BaseAnalyzer):
     INCLUDE_PET_EVENTS = True
 
     def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
-        self.windows: List[GargoyleWindow] = []
+        self.windows: list[GargoyleWindow] = []
         self._window = None
         self._buff_tracker = buff_tracker
         self._fight_duration = fight_duration
@@ -843,11 +839,11 @@ class FesteringStrikeTracker(BaseAnalyzer):
                 for rune in runes_before
                 if rune["name"] == "Frost" and rune["is_available"]
             )
-            death_available = sum(
-                1
-                for rune in runes_before
-                if rune["name"] == "Death" and rune["is_available"]
-            )
+            # death_available = sum(
+            #     1
+            #     for rune in runes_before
+            #     if rune["name"] == "Death" and rune["is_available"]
+            # )
 
             # Player decision analysis: Should they have waited for Blood+Frost?
             if blood_available < 1 or frost_available < 1:
@@ -863,7 +859,7 @@ class FesteringStrikeTracker(BaseAnalyzer):
                             "type": "death_rune_waste",
                             "ability": "Festering Strike",
                             "death_runes_wasted": 2,
-                            "message": f"Festering Strike cast with no Blood or Frost available (will use 2 death runes)",
+                            "message": "Festering Strike cast with no Blood or Frost available (will use 2 death runes)",
                         }
                     )
                 else:

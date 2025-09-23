@@ -1,23 +1,17 @@
-from typing import List
 
-from analysis.base import AnalysisScorer, BaseAnalyzer, Window, ScoreWeight
+from analysis.base import AnalysisScorer, BaseAnalyzer, ScoreWeight, Window
 from analysis.core_analysis import (
+    ArmyAnalyzer,
+    BloodChargeCapAnalyzer,
     BuffTracker,
+    BuffUptimeAnalyzer,
+    CoreAbilities,
     CoreAnalysisConfig,
     DiseaseAnalyzer,
-    GCDAnalyzer,
-    SynapseSpringsAnalyzer,
     MeleeUptimeAnalyzer,
-    RuneTracker,
-    TrinketAnalyzer,
-    RPAnalyzer,
-    CoreAbilities,
-    BloodChargeCapAnalyzer,
-    SoulReaperAnalyzer,
-    EmpoweredRuneWeaponAnalyzer,
-    BuffUptimeAnalyzer,
-    ArmyAnalyzer,
     PlagueLeechAnalyzer,
+    RuneTracker,
+    SynapseSpringsAnalyzer,
 )
 from analysis.unholy_analysis import BloodPlagueAnalyzer, FrostFeverAnalyzer
 from console_table import console
@@ -493,7 +487,7 @@ class RaiseDeadAnalyzer(BaseAnalyzer):
     INCLUDE_PET_EVENTS = True
 
     def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
-        self.windows: List[RaiseDeadWindow] = []
+        self.windows: list[RaiseDeadWindow] = []
         self._window = None
         self._buff_tracker = buff_tracker
         self._fight_duration = fight_duration
@@ -610,22 +604,22 @@ class ObliterateAnalyzer(BaseAnalyzer):
             runes_before = event.get("runes_before", [])
             runes_after = event.get("runes", [])
             if runes_before and runes_after:
-                # Count available runes before the cast
-                unholy_available = sum(
-                    1
-                    for rune in runes_before
-                    if rune["name"] == "Unholy" and rune["is_available"]
-                )
-                frost_available = sum(
-                    1
-                    for rune in runes_before
-                    if rune["name"] == "Frost" and rune["is_available"]
-                )
-                death_available = sum(
-                    1
-                    for rune in runes_before
-                    if rune["name"] == "Death" and rune["is_available"]
-                )
+                # Count available runes before the cast - currently unused
+                # unholy_available = sum(
+                #     1
+                #     for rune in runes_before
+                #     if rune["name"] == "Unholy" and rune["is_available"]
+                # )
+                # frost_available = sum(
+                #     1
+                #     for rune in runes_before
+                #     if rune["name"] == "Frost" and rune["is_available"]
+                # )
+                # death_available = sum(
+                #     1
+                #     for rune in runes_before
+                #     if rune["name"] == "Death" and rune["is_available"]
+                # )
 
                 # Count what runes were actually consumed (became unavailable)
                 unholy_consumed = sum(
@@ -675,11 +669,11 @@ class ObliterateAnalyzer(BaseAnalyzer):
                         is_bad_usage = True
                         if death_consumed == 2:
                             message_parts.append(
-                                f"Used 2 Death runes instead of Death+Unholy or Frost+Unholy"
+                                "Used 2 Death runes instead of Death+Unholy or Frost+Unholy"
                             )
                         elif death_consumed > 0 and frost_consumed > 0:
                             message_parts.append(
-                                f"Used Death+Frost instead of Death+Unholy or Frost+Unholy"
+                                "Used Death+Frost instead of Death+Unholy or Frost+Unholy"
                             )
 
                     if is_bad_usage:
@@ -809,22 +803,22 @@ class PlagueStrikeAnalyzer(BaseAnalyzer):
                     for rune in runes_before
                     if rune["name"] == "Unholy" and rune["is_available"]
                 )
-                death_available = sum(
-                    1
-                    for rune in runes_before
-                    if rune["name"] == "Death" and rune["is_available"]
-                )
+                # death_available = sum(
+                #     1
+                #     for rune in runes_before
+                #     if rune["name"] == "Death" and rune["is_available"]
+                # )
 
-                # Count what runes were actually consumed (became unavailable)
-                unholy_consumed = sum(
-                    1
-                    for i, rune in enumerate(runes_before)
-                    if (
-                        rune["name"] == "Unholy"
-                        and rune["is_available"]
-                        and not runes_after[i]["is_available"]
-                    )
-                )
+                # Count what runes were actually consumed (became unavailable) - currently unused
+                # unholy_consumed = sum(
+                #     1
+                #     for i, rune in enumerate(runes_before)
+                #     if (
+                #         rune["name"] == "Unholy"
+                #         and rune["is_available"]
+                #         and not runes_after[i]["is_available"]
+                #     )
+                # )
                 death_consumed = sum(
                     1
                     for i, rune in enumerate(runes_before)

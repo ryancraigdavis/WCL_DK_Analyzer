@@ -1,18 +1,17 @@
 import functools
 import itertools
 from collections import defaultdict
-from typing import Optional, List
 
 from analysis.base import (
     AnalysisScorer,
     BaseAnalyzer,
     BasePreprocessor,
-    Window,
     ScoreWeight,
+    Window,
     calculate_uptime,
     range_overlap,
 )
-from analysis.items import Trinket, ItemPreprocessor
+from analysis.items import ItemPreprocessor, Trinket
 from report import Fight
 
 
@@ -469,7 +468,7 @@ class DeadZoneAnalyzer(BasePreprocessor):
 
         return self._checker(event)
 
-    def get_recent_dead_zone(self, end) -> Optional[DeadZone]:
+    def get_recent_dead_zone(self, end) -> DeadZone | None:
         for dead_zone in reversed(self._dead_zones):
             # returns the closest dead-zone
             if dead_zone.start <= end:
@@ -2114,8 +2113,7 @@ class BuffUptimeAnalyzer(BaseAnalyzer):
 
     def _get_windows(self):
         for buff_name in self._buff_names:
-            for window in self._buff_tracker.get_windows(buff_name):
-                yield window
+            yield from self._buff_tracker.get_windows(buff_name)
 
     def set_start_time(self, start_time):
         self._start_time = start_time
@@ -2123,7 +2121,7 @@ class BuffUptimeAnalyzer(BaseAnalyzer):
     def _clamp_windows(self, windows):
         clamped_windows = []
 
-        for i, window in enumerate(windows):
+        for _i, window in enumerate(windows):
             if not range_overlap(
                 (window.start, window.end), (self._start_time, self._end_time)
             ):
@@ -2380,7 +2378,7 @@ class ArmyAnalyzer(BaseAnalyzer):
     INCLUDE_PET_EVENTS = True
 
     def __init__(self, fight_duration, buff_tracker, ignore_windows, items):
-        self.windows: List[ArmyWindow] = []
+        self.windows: list[ArmyWindow] = []
         self._window = None
         self._buff_tracker = buff_tracker
         self._fight_duration = fight_duration

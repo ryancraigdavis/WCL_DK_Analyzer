@@ -1,10 +1,11 @@
+import asyncio.exceptions
 import logging
 import os
 from datetime import datetime
 
 import aiohttp
-import asyncio.exceptions
 import sentry_sdk
+
 from report import Report, Source
 
 
@@ -57,43 +58,40 @@ class WCLClient:
         self._session = None
 
     async def _fetch_metadata(self, report_code):
-        metadata_query = (
-            """
-{
-  reportData {
-    report(code: "%s") {
+        metadata_query = f"""
+{{
+  reportData {{
+    report(code: "{report_code}") {{
       endTime
-      masterData {
-        abilities {
+      masterData {{
+        abilities {{
           gameID
           name
           icon
           type
-        }
-        actors {
+        }}
+        actors {{
           id
           name
           type
           subType
           petOwner
-        }
-      }
-      fights {
+        }}
+      }}
+      fights {{
         hardModeLevel
         encounterID
         id
         startTime
         endTime
-        enemyNPCs {
+        enemyNPCs {{
             id
-        }
-      }
-    }
-  }
-}
+        }}
+      }}
+    }}
+  }}
+}}
 """
-            % report_code
-        )
         return (await self._query(metadata_query, "metadata"))["data"]
 
     async def _fetch_events(self, report_code, fight_id, source: Source):
@@ -101,21 +99,18 @@ class WCLClient:
         events = []
         combatant_info = []
         next_page_timestamp = 0
-        rankings_query = """
-{
-    reportData {
-        report(code: "%(report_code)s") {
+        rankings_query = f"""
+{{
+    reportData {{
+        report(code: "{report_code}") {{
             rankings(
                 playerMetric: dps
-                fightIDs: [%(fight_id)s]
+                fightIDs: [{fight_id}]
             )
-        }
-    }
-}
-""" % {
-            "report_code": report_code,
-            "fight_id": fight_id,
-        }
+        }}
+    }}
+}}
+"""
 
         events_query_t = """
 {
@@ -163,12 +158,12 @@ class WCLClient:
         )
 
         while next_page_timestamp is not None:
-            events_query = events_query_t % dict(
-                report_code=report_code,
-                next_page_timestamp=next_page_timestamp,
-                source_id=source.id,
-                fight_id=fight_id,
-            )
+            events_query = events_query_t % {
+                "report_code": report_code,
+                "next_page_timestamp": next_page_timestamp,
+                "source_id": source.id,
+                "fight_id": fight_id,
+            }
             r = (await self._query(events_query, "events"))["data"]["reportData"][
                 "report"
             ]
@@ -278,7 +273,7 @@ class WCLClient:
             r = await session.post(
                 self.base_url,
                 json={"query": query},
-                headers=dict(Authorization=f"Bearer {self._auth}"),
+                headers={"Authorization": f"Bearer {self._auth}"},
                 raise_for_status=True,
                 timeout=timeout,
             )

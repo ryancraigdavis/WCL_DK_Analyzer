@@ -1,19 +1,19 @@
 from analysis.core_analysis import (
-    PrepullArmyOfTheDeadTracker,
+    BloodChargeCapAnalyzer,
+    BuffTracker,
     CoreAnalysisConfig,
     DeadZoneAnalyzer,
-    TalentPreprocessor,
-    BuffTracker,
     DebuffTracker,
     PetNameDetector,
+    PrepullArmyOfTheDeadTracker,
     RuneHasteTracker,
-    BloodChargeCapAnalyzer,
+    TalentPreprocessor,
 )
 from analysis.frost_analysis import (
     FrostAnalysisConfig,
 )
 from analysis.items import ItemPreprocessor, TrinketPreprocessor
-from analysis.unholy_analysis import UnholyAnalysisConfig, FesteringStrikeTracker
+from analysis.unholy_analysis import FesteringStrikeTracker, UnholyAnalysisConfig
 from report import Fight, Report
 
 
@@ -173,7 +173,7 @@ class Analyzer:
         """Remove any events we don't care to analyze or show"""
         events = []
 
-        for i, event in enumerate(self._fight.events):
+        for _i, event in enumerate(self._fight.events):
             # We're neither the source nor the target
             if (
                 event["sourceID"] != self._fight.source.id
