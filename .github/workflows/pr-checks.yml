@@ -13,6 +13,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
     - name: Setup Python 3.12 and UV
       uses: actions/setup-python@v4
       with:
@@ -20,6 +23,20 @@ jobs:
 
     - name: Install UV
       run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    - name: Configure AWS credentials for permission check
+      env:
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_WCL_ANALYZER_PROD }}
+      run: |
+        # Get AWS credentials from Doppler
+        export AWS_ACCESS_KEY_ID=$(doppler secrets get AWS_ACCESS_KEY_ID --plain)
+        export AWS_SECRET_ACCESS_KEY=$(doppler secrets get AWS_SECRET_ACCESS_KEY --plain)
+        export AWS_DEFAULT_REGION=$(doppler secrets get AWS_DEFAULT_REGION --plain)
+
+        # Configure AWS CLI
+        aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+        aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+        aws configure set default.region $AWS_DEFAULT_REGION
 
     - name: Backend Dependencies Check
       run: |
@@ -86,6 +103,50 @@ jobs:
           exit 1
         fi
 
+    - name: AWS Permissions Check
+      env:
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_WCL_ANALYZER_PROD }}
+      run: |
+        echo "✅ Testing AWS permissions..."
+
+        # Test S3 Lambda bucket access
+        echo "Testing S3 bucket access for Lambda deployment..."
+        if aws s3 ls s3://wcl-analyzer-lambda-code/ > /dev/null 2>&1; then
+          echo "✅ Can list S3 Lambda bucket"
+        else
+          echo "❌ Cannot access S3 Lambda bucket: wcl-analyzer-lambda-code"
+          exit 1
+        fi
+
+        # Test S3 upload permissions with a small test file
+        echo "test" > test-permissions.txt
+        if aws s3 cp test-permissions.txt s3://wcl-analyzer-lambda-code/test-permissions.txt > /dev/null 2>&1; then
+          echo "✅ Can upload to S3 Lambda bucket"
+          # Cleanup test file
+          aws s3 rm s3://wcl-analyzer-lambda-code/test-permissions.txt > /dev/null 2>&1
+        else
+          echo "❌ Cannot upload to S3 Lambda bucket - missing s3:PutObject permission"
+          exit 1
+        fi
+
+        # Test Lambda function access
+        export WCL_FUNCTION_NAME=$(doppler secrets get WCL_FUNCTION_NAME --plain)
+        if aws lambda get-function --function-name "$WCL_FUNCTION_NAME" > /dev/null 2>&1; then
+          echo "✅ Can access Lambda function: $WCL_FUNCTION_NAME"
+        else
+          echo "⚠️ Cannot access Lambda function (may not exist yet): $WCL_FUNCTION_NAME"
+        fi
+
+        # Test CloudFront invalidation permissions
+        if aws cloudfront create-invalidation --distribution-id E2QQGL1YVUW0M3 --paths '/test' --output json > /dev/null 2>&1; then
+          echo "✅ Can create CloudFront invalidations"
+        else
+          echo "❌ Cannot create CloudFront invalidations - missing cloudfront:CreateInvalidation permission"
+          exit 1
+        fi
+
+        rm -f test-permissions.txt
+
   dry-run-frontend:
     runs-on: ubuntu-latest
     name: Frontend Dry Run
@@ -94,12 +155,29 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install Doppler CLI
+      uses: dopplerhq/cli-action@v3
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'yarn'
         cache-dependency-path: frontend/yarn.lock
+
+    - name: Configure AWS credentials for permission check
+      env:
+        DOPPLER_TOKEN: ${{ secrets.DOPPLER_WCL_ANALYZER_PROD }}
+      run: |
+        # Get AWS credentials from Doppler
+        export AWS_ACCESS_KEY_ID=$(doppler secrets get AWS_ACCESS_KEY_ID --plain)
+        export AWS_SECRET_ACCESS_KEY=$(doppler secrets get AWS_SECRET_ACCESS_KEY --plain)
+        export AWS_DEFAULT_REGION=$(doppler secrets get AWS_DEFAULT_REGION --plain)
+
+        # Configure AWS CLI
+        aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+        aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+        aws configure set default.region $AWS_DEFAULT_REGION
 
     - name: Frontend Dependencies Check
       run: |
@@ -122,6 +200,32 @@ jobs:
           echo "❌ Frontend build failed - no dist directory"
           exit 1
         fi
+
+    - name: Frontend AWS Permissions Check
+      run: |
+        echo "✅ Testing frontend AWS permissions..."
+
+        # Test S3 frontend bucket access
+        echo "Testing S3 bucket access for frontend deployment..."
+        if aws s3 ls s3://wcl-analyzer-frontend/ > /dev/null 2>&1; then
+          echo "✅ Can list S3 frontend bucket"
+        else
+          echo "❌ Cannot access S3 frontend bucket: wcl-analyzer-frontend"
+          exit 1
+        fi
+
+        # Test S3 upload permissions with a small test file
+        echo "test" > test-frontend-permissions.txt
+        if aws s3 cp test-frontend-permissions.txt s3://wcl-analyzer-frontend/test-permissions.txt > /dev/null 2>&1; then
+          echo "✅ Can upload to S3 frontend bucket"
+          # Cleanup test file
+          aws s3 rm s3://wcl-analyzer-frontend/test-permissions.txt > /dev/null 2>&1
+        else
+          echo "❌ Cannot upload to S3 frontend bucket - missing s3:PutObject permission"
+          exit 1
+        fi
+
+        rm -f test-frontend-permissions.txt
 
   dry-run-extensions:
     runs-on: ubuntu-latest
