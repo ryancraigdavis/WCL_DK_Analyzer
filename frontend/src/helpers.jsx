@@ -111,7 +111,7 @@ export const formatUpTime = (upTime, spellName, infoOnly=false, maxUptime = 1.0)
   if (infoOnly) {
     color = "hl"
     Icon = Info
-  } else if (uptimePercent > 0.9) {
+  } else if (uptimePercent > 0.8) {
     color = "green"
     Icon = Check
   } else if (uptimePercent > 0.65) {
@@ -129,10 +129,10 @@ export const formatUpTime = (upTime, spellName, infoOnly=false, maxUptime = 1.0)
     const tooltipText = (
       <>
         <span className="green">Green: </span>
-        More than {Number(maxUptime * 0.9 * 100).toFixed(2)}%
+        More than {Number(maxUptime * 0.8 * 100).toFixed(2)}%
         <br />
         <span className="yellow">Yellow: </span>
-        Between {Number(maxUptime * 0.65 * 100).toFixed(2)}% and {Number(maxUptime * 0.9 * 100).toFixed(2)}%
+        Between {Number(maxUptime * 0.65 * 100).toFixed(2)}% and {Number(maxUptime * 0.8 * 100).toFixed(2)}%
         <br />
         <span className="orange">Orange: </span>
         Between {Number(maxUptime * 0.5 * 100).toFixed(2)}% and {Number(maxUptime * 0.65 * 100).toFixed(2)}%
