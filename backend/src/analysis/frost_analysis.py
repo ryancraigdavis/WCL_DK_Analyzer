@@ -1,4 +1,3 @@
-
 from analysis.base import AnalysisScorer, BaseAnalyzer, ScoreWeight, Window
 from analysis.core_analysis import (
     ArmyAnalyzer,

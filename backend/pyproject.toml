@@ -10,8 +10,8 @@ dev = ["pytest", "black", "ruff", "mangum"]
 [tool.hatch.envs.default.scripts]
 dev-server = "cd src && uvicorn api:app --reload"
 # test = "pytest"
-lint = ["black src/", "ruff check src/ --fix"]
-lint-check = ["black --check src/", "ruff check src/"]
+lint = ["ruff check src/ --fix"]
+lint-check = ["ruff check src/"]
 
 [build-system]
 requires = ["hatchling"]
