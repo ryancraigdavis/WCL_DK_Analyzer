@@ -5,13 +5,13 @@ requires-python = ">=3.12"
 dependencies = ["requests", "rich", "fastapi", "uvicorn[standard]", "aiohttp", "sentry-sdk[fastapi]"]
 
 [project.optional-dependencies]
-dev = ["pytest", "black", "flake8", "mangum"]
+dev = ["pytest", "black", "ruff", "mangum"]
 
 [tool.hatch.envs.default.scripts]
 dev-server = "cd src && uvicorn api:app --reload"
 # test = "pytest"
-lint = ["black src/", "flake8 src/ --max-line-length 150 --statistics --show-source"]
-lint-check = ["black --check src/", "flake8 src/ --max-line-length 150 --statistics --show-source"]
+lint = ["black src/", "ruff format src/", "ruff check src/ --fix"]
+lint-check = ["black --check src/", "ruff format --check src/", "ruff check src/"]
 
 [build-system]
 requires = ["hatchling"]
@@ -20,7 +20,7 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "black>=25.1.0",
-    "flake8>=7.3.0",
+    "ruff>=0.7.0",
     "hatch>=1.9.0",
     "mangum>=0.19.0",
     "pytest>=8.4.1",
@@ -28,3 +28,29 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
+
+[tool.ruff]
+line-length = 150
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "B904",  # raise from None or raise from e
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

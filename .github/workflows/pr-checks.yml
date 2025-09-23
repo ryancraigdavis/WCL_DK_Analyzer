@@ -57,7 +57,7 @@ jobs:
         export PATH="$HOME/.cargo/bin:$PATH"
         source .venv/bin/activate
 
-        echo "✅ Running linting checks..."
+        echo "✅ Running Ruff linting checks..."
         uv run hatch run lint-check
 
     - name: Backend Package Check
