@@ -357,43 +357,20 @@ class DarkTransformationWindow(Window):
             self.total_damage += event["amount"]
 
     def score(self):
-        # Check if bloodlust is active during this dark transformation (>0 uptime)
-        has_bloodlust = (self.bl_uptime or 0) > 0
-
-        # Double buff weights when bloodlust is active during dark transformation
-        buff_multiplier = 2.0 if has_bloodlust else 1.0
-
-        dark_transformation_score = ScoreWeight.calculate(
-            ScoreWeight(self.berserking_uptime or 0, (self.berserking_uptime or 0) * buff_multiplier),
-            ScoreWeight(self.potion_uptime or 0, 3 * buff_multiplier if self.potion_uptime else 0),
+        # Simplified scoring - fixed weights, no Bloodlust multipliers
+        return ScoreWeight.calculate(
+            ScoreWeight(self.berserking_uptime or 0, 1),
+            ScoreWeight(self.potion_uptime or 0, 3),
+            ScoreWeight(self.synapse_springs_uptime or 0, 3),
+            ScoreWeight(self.fallen_crusader_uptime or 0, 3),
+            ScoreWeight(self.unholy_frenzy_uptime or 0, 5),
+            ScoreWeight(self.bl_uptime or 0, 4),
             ScoreWeight(
-                self.synapse_springs_uptime or 0,
-                3 * buff_multiplier if self.synapse_springs_uptime else 0,
-            ),
-            ScoreWeight(
-                self.fallen_crusader_uptime or 0,
-                3 * buff_multiplier if self.fallen_crusader_uptime else 0,
-            ),
-            ScoreWeight(
-                self.unholy_frenzy_uptime or 0, 10 * buff_multiplier if self.unholy_frenzy_uptime else 0
-            ),
-            ScoreWeight(self.bl_uptime or 0, 10 if self.bl_uptime else 0),  # Bloodlust base weight, not doubled
-            ScoreWeight(
-                sum(
-                    [
-                        t["uptime"].uptime()
-                        for t in self.trinket_uptimes
-                        if t["uptime"].uptime() > 0
-                    ]
-                )
-                / (
-                    sum(1 for t in self.trinket_uptimes if t["uptime"].uptime() > 0)
-                    or 1
-                ),
-                sum(2 * buff_multiplier for t in self.trinket_uptimes if t["uptime"].uptime() > 0),  # Trinkets doubled during bloodlust
+                sum(t["uptime"].uptime() for t in self.trinket_uptimes if t["uptime"].uptime() > 0) /
+                (sum(1 for t in self.trinket_uptimes if t["uptime"].uptime() > 0) or 1),
+                sum(2 for t in self.trinket_uptimes if t["uptime"].uptime() > 0),
             ),
         )
-        return dark_transformation_score
 
 
 class DarkTransformationAnalyzer(BaseAnalyzer):
@@ -662,42 +639,31 @@ class GargoyleWindow(Window):
             self.total_damage += event["amount"]
 
     def score(self):
-        # MoP uses dynamic tracking - score based on uptime percentage
+        # Simplified scoring - no more Bloodlust multipliers
         gargoyle_duration = self.end - self.start  # 30 seconds max
 
-        # Check if bloodlust is active during this gargoyle (>0 uptime)
-        has_bloodlust = self.bloodlust_uptime > 0
-
-        # Double buff weights when bloodlust is active during gargoyle
-        buff_multiplier = 2.0 if has_bloodlust else 1.0
-
         return ScoreWeight.calculate(
-            ScoreWeight(self.synapse_springs_uptime / gargoyle_duration, 2 * buff_multiplier),
-            ScoreWeight(self.fallen_crusader_uptime / gargoyle_duration, 3 * buff_multiplier),
-            ScoreWeight(self.potion_uptime / gargoyle_duration, 3 * buff_multiplier),
+            # Core buff coordination (fixed weights)
+            ScoreWeight(self.synapse_springs_uptime / gargoyle_duration, 2),
+            ScoreWeight(self.fallen_crusader_uptime / gargoyle_duration, 3),
+            ScoreWeight(self.potion_uptime / gargoyle_duration, 3),
+
             # Performance score based on casts (max ~18 casts in 30s)
             ScoreWeight(self.num_casts / 18, 4),
-            # Trinket uptime score (also doubled during bloodlust)
+
+            # Trinket coordination
             ScoreWeight(
                 sum(t["uptime"] for t in self.trinket_snapshots) /
                 (gargoyle_duration * len(self.trinket_snapshots)) if self.trinket_snapshots else 0,
-                len(self.trinket_snapshots) * 2 * buff_multiplier,
+                len(self.trinket_snapshots) * 2,
             ),
-            # Blood Fury uptime score (doubled during bloodlust)
-            ScoreWeight(
-                self.bloodfury_uptime / gargoyle_duration if self._bloodfury_uptime else 0,
-                2 * buff_multiplier if self._bloodfury_uptime else 0,
-            ),
-            # Berserking uptime score (doubled during bloodlust)
-            ScoreWeight(
-                self.berserking_uptime / gargoyle_duration if self._berserking_uptime else 0,
-                2 * buff_multiplier if self._berserking_uptime else 0,
-            ),
-            # Bloodlust uptime score (base weight, not doubled)
-            ScoreWeight(
-                self.bloodlust_uptime / gargoyle_duration if self._bloodlust_uptime else 0,
-                3 if self._bloodlust_uptime else 0,
-            ),
+
+            # Race abilities
+            ScoreWeight(self.bloodfury_uptime / gargoyle_duration, 2),
+            ScoreWeight(self.berserking_uptime / gargoyle_duration, 2),
+
+            # Bloodlust coordination
+            ScoreWeight(self.bloodlust_uptime / gargoyle_duration, 3),
         )
 
 
@@ -1228,107 +1194,34 @@ class UnholyAnalysisScorer(AnalysisScorer):
         super().__init__(analyzers)
         self.encounter_name = encounter_name
 
-    def get_encounter_adjustments(self):
-        """Get encounter-specific scoring adjustments"""
-        adjustments = {
-            "Blade Lord Ta'yak": {
-                # Tornado phase makes buff coordination harder
-                "soul_reaper_weight_multiplier": 0.7,
-                "buff_coordination_tolerance": 0.8,
-                "gcd_delay_tolerance": 1.2,
-            },
-            "Grand Empress Shek'zeer": {
-                # Mind control phases disrupt rotations
-                "soul_reaper_weight_multiplier": 0.8,
-                "buff_coordination_tolerance": 0.85,
-            },
-            "Lei Shi": {
-                # Hide phases and high movement
-                "soul_reaper_weight_multiplier": 0.6,
-                "buff_coordination_tolerance": 0.7,
-                "gcd_delay_tolerance": 1.3,
-            },
-            "Tsulong": {
-                # Day/night phase transitions
-                "buff_coordination_tolerance": 0.9,
-            },
-        }
-        return adjustments.get(self.encounter_name, {})
-
     def get_score_weights(self):
-        exponent_factor = 1.5
-        adjustments = self.get_encounter_adjustments()
-
-        # Apply Soul Reaper weight adjustment if specified
-        soul_reaper_weight = 5
-        if "soul_reaper_weight_multiplier" in adjustments:
-            soul_reaper_weight *= adjustments["soul_reaper_weight_multiplier"]
-
+        """Simplified 4-category scoring system - Equal 25% weight distribution"""
         return {
-            GargoyleAnalyzer: {
-                "weight": 7,  # Changed from 3 * possible_gargoyles to fixed weight
-                "exponent_factor": exponent_factor,
-            },
-            BloodPlagueAnalyzer: {
-                "weight": 3,
-                "exponent_factor": exponent_factor,
-            },
-            FrostFeverAnalyzer: {
-                "weight": 3,
-                "exponent_factor": exponent_factor,
-            },
-            DarkTransformationUptimeAnalyzer: {
-                "weight": 7,  # Reduced from 10 to 7
-                "exponent_factor": exponent_factor,
-            },
-            DarkTransformationAnalyzer: {
-                "weight": 4,
-                "exponent_factor": exponent_factor,
-            },
-            DeathAndDecayUptimeAnalyzer: {
-                "weight": 2,  # Reduced from 4 to 2
-                "exponent_factor": exponent_factor,
-            },
-            MeleeUptimeAnalyzer: {
-                "weight": 2,
-                "exponent_factor": exponent_factor,
-            },
-            RPAnalyzer: {
-                "weight": 1,
-            },
-            UnholyPresenceUptimeAnalyzer: {
-                "weight": 1,
-                "exponent_factor": exponent_factor,
-            },
-            GhoulAnalyzer: {
-                "weight": 4,
-                "exponent_factor": exponent_factor,
-            },
-            BuffTracker: {
-                "weight": 1,
-            },
-            SynapseSpringsAnalyzer: {
-                "weight": 2,
-            },
-            TrinketAnalyzer: {
-                "weight": lambda ta: ta.num_on_use_trinkets * 2,
-            },
-            FesteringStrikeTracker: {
-                "weight": 1,
-                "exponent_factor": exponent_factor,
-            },
-            SoulReaperAnalyzer: {
-                "weight": soul_reaper_weight,
-                "exponent_factor": exponent_factor,
-            },
-            OutbreakSnapshotTracker: {
-                "weight": 3,
-                "exponent_factor": exponent_factor,
-            },
-            PlagueLeechAnalyzer: {
-                "weight": 2,
-                "exponent_factor": exponent_factor,
-            },
+            # Pet Management (25% total weight)
+            GargoyleAnalyzer: {"weight": 10},
+            DarkTransformationUptimeAnalyzer: {"weight": 8},
+            DarkTransformationAnalyzer: {"weight": 4},
+            GhoulAnalyzer: {"weight": 3},
+
+            # Disease/DoT Management (25% total weight)
+            BloodPlagueAnalyzer: {"weight": 8},
+            FrostFeverAnalyzer: {"weight": 8},
+            SoulReaperAnalyzer: {"weight": 9},
+
+            # Resource Efficiency (25% total weight)
+            RPAnalyzer: {"weight": 8},
+            DeathAndDecayUptimeAnalyzer: {"weight": 9},
+            MeleeUptimeAnalyzer: {"weight": 8},
+
+            # Buff Coordination (25% total weight)
+            SynapseSpringsAnalyzer: {"weight": 8},
+            TrinketAnalyzer: {"weight": 8},
+            OutbreakSnapshotTracker: {"weight": 9},
+
+            # Minor components (keep minimal weight for completeness)
+            UnholyPresenceUptimeAnalyzer: {"weight": 1},
+            BuffTracker: {"weight": 1},
+            PlagueLeechAnalyzer: {"weight": 1},
         }
 
     def report(self):
