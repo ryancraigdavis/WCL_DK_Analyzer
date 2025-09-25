@@ -802,7 +802,18 @@ class RuneTracker(BaseAnalyzer):
                 break
 
         # Refresh the cooldown of one of the runes
-        for i in range(2):
+        # Detect spec based on starting runes: Frost starts with death runes at indices 0-1
+        is_frost_spec = self.runes[0].type == "Death" and self.runes[1].type == "Death"
+
+        # Priority depends on spec:
+        # Unholy: Blood (0-1) > Frost (2-3) > Unholy (4-5)
+        # Frost: Unholy (4-5) > Frost (2-3) > Death/Blood (0-1)
+        if is_frost_spec:
+            rune_priority_indices = [4, 5, 2, 3, 0, 1]
+        else:  # Unholy or default
+            rune_priority_indices = [0, 1, 2, 3, 4, 5]
+
+        for i in rune_priority_indices:
             if not self.runes[i].can_spend(timestamp):
                 self.runes[i].refresh(timestamp)
                 break
